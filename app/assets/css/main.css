@@ -1,0 +1,105 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@layer theme {
+  .dark {
+    --ui-bg-inverted: var(--ui-color-neutral-700);
+    --ui-text-inverted: var(--ui-color-neutral-50);
+    --ui-border-inverted: var(--ui-color-neutral-600);
+  }
+}
+
+@theme static {
+  /* ===================================================================
+   * PawFile Design System — Sentry-inspired dark purple aesthetic
+   * See DESIGN.md for full context and usage guidelines
+   * =================================================================== */
+
+  /* -----------------------------------------------------------------
+   * Sentry: Sentry Purple — links, hover states, focus rings
+   * Base: #6a5fc1 | Usage: primary color role
+   * ----------------------------------------------------------------- */
+  --color-sentry-50: #efecfb;
+  --color-sentry-100: #ddd9f7;
+  --color-sentry-200: #bcb4f0;
+  --color-sentry-300: #9a8ee8;
+  --color-sentry-400: #7a69d5;
+  --color-sentry-500: #6a5fc1;
+  --color-sentry-600: #5047a3;
+  --color-sentry-700: #3e3882;
+  --color-sentry-800: #2c2860;
+  --color-sentry-900: #1c1940;
+  --color-sentry-950: #110f27;
+
+  /* -----------------------------------------------------------------
+   * Mauve: Muted Purple — button backgrounds, secondary interactive
+   * Base: #79628c | Usage: secondary color role
+   * ----------------------------------------------------------------- */
+  --color-mauve-50: #f5f2f9;
+  --color-mauve-100: #ebe5f3;
+  --color-mauve-200: #d6cbe6;
+  --color-mauve-300: #bfaed6;
+  --color-mauve-400: #a48ec3;
+  --color-mauve-500: #79628c;
+  --color-mauve-600: #634e76;
+  --color-mauve-700: #4e3c5d;
+  --color-mauve-800: #382b43;
+  --color-mauve-900: #241c2c;
+  --color-mauve-950: #130e17;
+
+  /* -----------------------------------------------------------------
+   * Neon: Lime Green — high-visibility CTAs and highlights (use sparingly)
+   * Base: #c2ef4e | Usage: tertiary color role
+   * ----------------------------------------------------------------- */
+  --color-neon-50: #f5fde7;
+  --color-neon-100: #eafbc6;
+  --color-neon-200: #d5f790;
+  --color-neon-300: #c2ef4e;
+  --color-neon-400: #a9d832;
+  --color-neon-500: #88b220;
+  --color-neon-600: #668a14;
+  --color-neon-700: #4d650e;
+  --color-neon-800: #334308;
+  --color-neon-900: #1c2404;
+  --color-neon-950: #0d1201;
+
+  /* -----------------------------------------------------------------
+   * Dusk: Dark Purple — backgrounds, surfaces, structural elements
+   * Bases: #1f1633 (primary bg), #150f23 (deeper bg)
+   * Usage: neutral color role
+   * ----------------------------------------------------------------- */
+  --color-dusk-50: #f0eef5;
+  --color-dusk-100: #e1dded;
+  --color-dusk-200: #c3bcdb;
+  --color-dusk-300: #a49bc9;
+  --color-dusk-400: #857ab7;
+  --color-dusk-500: #6659a5;
+  --color-dusk-600: #4a3f80;
+  --color-dusk-700: #352d5e;
+  --color-dusk-800: #261d44;
+  --color-dusk-900: #1f1633;
+  --color-dusk-950: #150f23;
+
+  /* -----------------------------------------------------------------
+   * Single-value design tokens
+   * Available as Tailwind utilities: bg-*, text-*, border-*, etc.
+   * ----------------------------------------------------------------- */
+
+  /* Deep Violet — select dropdowns, active states (#422082) */
+  --color-violet-deep: #422082;
+
+  /* Coral — focus state backgrounds (#ffb287) */
+  --color-coral: #ffb287;
+
+  /* Pink — focus outlines, decorative accents (#fa7faa) */
+  --color-pink-accent: #fa7faa;
+
+  /* Borders */
+  --color-border-dark: #362d59;
+  --color-border-button: #584674;
+  --color-border-light: #cfcfdb;
+
+  /* Code syntax highlight */
+  --color-code: #dcdcaa;
+}
+
