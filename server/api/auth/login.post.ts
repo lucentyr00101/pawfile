@@ -1,4 +1,4 @@
-import { User } from '../../models/user.model'
+import { User } from '~~/server/models/user.model'
 
 const GENERIC_401 = 'Invalid email or password'
 
