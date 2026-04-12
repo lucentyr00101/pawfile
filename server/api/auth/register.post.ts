@@ -1,4 +1,6 @@
-import { User } from '../../models/user.model'
+import { connectDB } from '~~/server/utils/db'
+import { User } from '~~/server/models/user.model'
+import { hashPassword } from '~~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
