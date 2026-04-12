@@ -1,7 +1,7 @@
-import { connectDB } from '../../utils/db'
-import { User } from '../../models/user.model'
+import { connectDB } from '~~/server/utils/db'
+import { User } from '~~/server/models/user.model'
 
-export default oauthGoogleEventHandler({
+export default defineOAuthGoogleEventHandler({
   async onSuccess(event, { user: googleProfile }) {
     await connectDB()
 
