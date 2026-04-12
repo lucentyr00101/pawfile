@@ -4,8 +4,8 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 definePageMeta({ layout: false })
 
 const toast = useToast()
-const router = useRouter()
 const route = useRoute()
+const { refresh } = useAuth()
 
 const state = reactive({
   email: '',
@@ -53,12 +53,13 @@ async function onSubmit(event: FormSubmitEvent<typeof state>) {
         password: event.data.password,
       },
     })
+    await refresh()
     toast.add({
       title: 'Welcome back!',
       description: 'You have been signed in.',
       color: 'success',
     })
-    await router.push('/dashboard')
+    await navigateTo('/dashboard')
   } catch (err: unknown) {
     const apiErr = err as { data?: { statusMessage?: string; message?: string } }
     const message = apiErr?.data?.statusMessage ?? apiErr?.data?.message ?? 'Something went wrong. Please try again.'
