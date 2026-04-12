@@ -44,7 +44,7 @@ PawFile is a **Nuxt 4** app (files live under `app/`) backed by a **Nitro** serv
 
 ## Design System
 
-Always refer to `DESIGN.md` for design decisions and reference. Colors are provided in the Nuxt UI config file.
+Always refer to `DESIGN.md` when working with anything frontend related for proper design concepts and reference. Colors are provided in the Nuxt UI config file.
 
 The design uses a Sentry-inspired dark-purple aesthetic:
 - **Tailwind utilities** map directly to the custom palette defined in `assets/css/main.css`
