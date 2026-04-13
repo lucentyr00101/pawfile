@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr:*)",
+      "Bash(bun run:*)",
+      "Bash(xargs grep:*)",
+      "Bash(python \"C:\\\\Users\\\\Meliodas\\\\.claude\\\\plugins\\\\cache\\\\ui-ux-pro-max-skill\\\\ui-ux-pro-max\\\\2.5.0\\\\.claude\\\\skills\\\\ui-ux-pro-max\\\\scripts\\\\search.py\" \"pet health tracker auth registration dark purple SaaS\" --design-system -p \"PawFile\" -f markdown)",
+      "Bash(python \"C:/Users/Meliodas/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/cli/assets/scripts/search.py\" \"pet health tracker auth registration dark purple SaaS\" --design-system -p \"PawFile\" -f markdown)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts',{}\\), indent=2\\)\\)\")",
+      "Bash(bun eslint:*)",
+      "Bash(bun nuxt:*)",
+      "Bash(xargs cat:*)",
+      "Bash(gh api:*)",
+      "Bash(gh issue:*)"
+    ]
+  }
+}
