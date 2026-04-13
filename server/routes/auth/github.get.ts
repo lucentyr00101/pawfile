@@ -43,7 +43,7 @@ export default defineOAuthGitHubEventHandler({
       },
     })
 
-    return sendRedirect(event, '/')
+    return sendRedirect(event, '/dashboard')
   },
 
   onError(event, error) {
