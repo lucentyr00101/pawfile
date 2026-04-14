@@ -12,7 +12,8 @@ export async function connectDB(): Promise<void> {
   }
 
   try {
-    await mongoose.connect(uri)
+    const dbName = process.env.MONGODB_DB_NAME || 'pawfile'
+    await mongoose.connect(uri, { dbName })
     isConnected = true
     console.log('[db] Connected to MongoDB')
   } catch (error) {
