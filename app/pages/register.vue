@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormSubmitEvent } from '@nuxt/ui'
+import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
@@ -17,31 +17,29 @@ const loading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-type FormError = { path: string; message: string }
-
 function validate(data: typeof state): FormError[] {
   const errors: FormError[] = []
 
   if (!data.name.trim()) {
-    errors.push({ path: 'name', message: 'Name is required' })
+    errors.push({ name: 'name', message: 'Name is required' })
   }
 
   if (!data.email.trim()) {
-    errors.push({ path: 'email', message: 'Email is required' })
+    errors.push({ name: 'email', message: 'Email is required' })
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-    errors.push({ path: 'email', message: 'Please enter a valid email address' })
+    errors.push({ name: 'email', message: 'Please enter a valid email address' })
   }
 
   if (!data.password) {
-    errors.push({ path: 'password', message: 'Password is required' })
+    errors.push({ name: 'password', message: 'Password is required' })
   } else if (data.password.length < 8) {
-    errors.push({ path: 'password', message: 'Password must be at least 8 characters' })
+    errors.push({ name: 'password', message: 'Password must be at least 8 characters' })
   }
 
   if (!data.confirmPassword) {
-    errors.push({ path: 'confirmPassword', message: 'Please confirm your password' })
+    errors.push({ name: 'confirmPassword', message: 'Please confirm your password' })
   } else if (data.password !== data.confirmPassword) {
-    errors.push({ path: 'confirmPassword', message: 'Passwords do not match' })
+    errors.push({ name: 'confirmPassword', message: 'Passwords do not match' })
   }
 
   return errors

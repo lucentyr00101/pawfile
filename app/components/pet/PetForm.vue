@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormSubmitEvent } from '@nuxt/ui'
+import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 interface PetFormData {
   name: string
@@ -63,22 +63,20 @@ const state = reactive({
   isPublic: props.pet?.isPublic ?? false,
 })
 
-type FormError = { path: string; message: string }
-
 function validate(data: typeof state): FormError[] {
   const errors: FormError[] = []
 
   if (!data.name.trim())
-    errors.push({ path: 'name', message: 'Name is required' })
+    errors.push({ name: 'name', message: 'Name is required' })
 
   if (!data.species)
-    errors.push({ path: 'species', message: 'Species is required' })
+    errors.push({ name: 'species', message: 'Species is required' })
 
   if (data.weight !== '' && (isNaN(Number(data.weight)) || Number(data.weight) <= 0))
-    errors.push({ path: 'weight', message: 'Weight must be a positive number' })
+    errors.push({ name: 'weight', message: 'Weight must be a positive number' })
 
   if (data.birthday && new Date(data.birthday) > new Date())
-    errors.push({ path: 'birthday', message: 'Birthday cannot be in the future' })
+    errors.push({ name: 'birthday', message: 'Birthday cannot be in the future' })
 
   return errors
 }

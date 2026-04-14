@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormSubmitEvent } from '@nuxt/ui'
+import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
@@ -15,8 +15,6 @@ const state = reactive({
 const loading = ref(false)
 const showPassword = ref(false)
 
-type FormError = { path: string; message: string }
-
 onMounted(() => {
   if (route.query.error === 'oauth_failed') {
     toast.add({
@@ -31,13 +29,13 @@ function validate(data: typeof state): FormError[] {
   const errors: FormError[] = []
 
   if (!data.email.trim()) {
-    errors.push({ path: 'email', message: 'Email is required' })
+    errors.push({ name: 'email', message: 'Email is required' })
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-    errors.push({ path: 'email', message: 'Please enter a valid email address' })
+    errors.push({ name: 'email', message: 'Please enter a valid email address' })
   }
 
   if (!data.password) {
-    errors.push({ path: 'password', message: 'Password is required' })
+    errors.push({ name: 'password', message: 'Password is required' })
   }
 
   return errors
