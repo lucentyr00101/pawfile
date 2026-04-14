@@ -85,101 +85,148 @@ function onSubmit(event: FormSubmitEvent<typeof state>) {
   emit('submit', { ...event.data })
 }
 
-const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
+const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
 </script>
 
 <template>
-  <UForm :validate="validate" :state="state" class="space-y-4" @submit="onSubmit">
+  <UForm :validate="validate" :state="state" class="space-y-6" @submit="onSubmit">
 
-    <!-- Name -->
-    <UFormField label="Pet Name" name="name" required :ui="formFieldUi">
-      <UInput
-        v-model="state.name"
-        type="text"
-        placeholder="e.g. Buddy"
-        size="lg"
-        class="w-full"
-      />
-    </UFormField>
+    <!-- ── Section: Identity ─────────────────────────────────────── -->
+    <div class="flex items-center gap-3">
+      <p
+        class="text-[10px] font-semibold uppercase text-[#a49bc9] shrink-0"
+        style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
+      >
+        Identity
+      </p>
+      <div class="flex-1 h-px" style="background: #362d59" />
+    </div>
 
-    <!-- Species -->
-    <UFormField label="Species" name="species" required :ui="formFieldUi">
-      <USelect
-        v-model="state.species"
-        :items="SPECIES_OPTIONS"
-        placeholder="Select species"
-        size="lg"
-        class="w-full"
-      />
-    </UFormField>
-
-    <!-- Breed + Birthday (two-column on sm+) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <UFormField label="Breed" name="breed" :ui="formFieldUi">
+    <div class="space-y-4">
+      <!-- Name (required) -->
+      <UFormField name="name" :ui="labelUi" required>
+        <template #label>
+          Pet Name
+          <span class="text-[#fa7faa] ml-0.5">*</span>
+        </template>
         <UInput
-          v-model="state.breed"
+          v-model="state.name"
           type="text"
-          placeholder="e.g. Golden Retriever"
+          placeholder="e.g. Buddy"
           size="lg"
           class="w-full"
         />
       </UFormField>
 
-      <UFormField label="Birthday" name="birthday" :ui="formFieldUi">
-        <UInput
-          v-model="state.birthday"
-          type="date"
-          size="lg"
-          class="w-full"
-        />
-      </UFormField>
-    </div>
-
-    <!-- Gender + Weight (two-column on sm+) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <UFormField label="Gender" name="gender" :ui="formFieldUi">
+      <!-- Species (required) -->
+      <UFormField name="species" :ui="labelUi" required>
+        <template #label>
+          Species
+          <span class="text-[#fa7faa] ml-0.5">*</span>
+        </template>
         <USelect
-          v-model="state.gender"
-          :items="GENDER_OPTIONS"
-          placeholder="Select gender"
+          v-model="state.species"
+          :items="SPECIES_OPTIONS"
+          placeholder="Select species"
           size="lg"
           class="w-full"
         />
       </UFormField>
 
-      <UFormField label="Weight" name="weight" :ui="formFieldUi">
-        <UInput
-          v-model="state.weight"
-          type="number"
-          placeholder="0.0"
-          min="0"
-          step="0.1"
+      <!-- Breed + Birthday -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <UFormField label="Breed" name="breed" :ui="labelUi">
+          <UInput
+            v-model="state.breed"
+            type="text"
+            placeholder="e.g. Golden Retriever"
+            size="lg"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField label="Birthday" name="birthday" :ui="labelUi">
+          <UInput
+            v-model="state.birthday"
+            type="date"
+            size="lg"
+            class="w-full"
+          />
+        </UFormField>
+      </div>
+    </div>
+
+    <!-- ── Section: Physical Details ─────────────────────────────── -->
+    <div class="flex items-center gap-3">
+      <p
+        class="text-[10px] font-semibold uppercase text-[#a49bc9] shrink-0"
+        style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
+      >
+        Physical Details
+      </p>
+      <div class="flex-1 h-px" style="background: #362d59" />
+    </div>
+
+    <div class="space-y-4">
+      <!-- Gender + Weight -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <UFormField label="Gender" name="gender" :ui="labelUi">
+          <USelect
+            v-model="state.gender"
+            :items="GENDER_OPTIONS"
+            placeholder="Select gender"
+            size="lg"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField label="Weight" name="weight" :ui="labelUi">
+          <UInput
+            v-model="state.weight"
+            type="number"
+            placeholder="0.0"
+            min="0"
+            step="0.1"
+            size="lg"
+            class="w-full"
+          >
+            <template #trailing>
+              <span
+                class="text-[#a49bc9] text-sm select-none"
+                style="font-family: Rubik, sans-serif"
+              >kg</span>
+            </template>
+          </UInput>
+        </UFormField>
+      </div>
+
+      <!-- Notes -->
+      <UFormField label="Notes" name="notes" :ui="labelUi">
+        <UTextarea
+          v-model="state.notes"
+          placeholder="Any additional notes about your pet…"
+          :rows="3"
           size="lg"
           class="w-full"
-        >
-          <template #trailing>
-            <span
-              class="text-[#a49bc9] text-sm select-none"
-              style="font-family: Rubik, sans-serif"
-            >kg</span>
-          </template>
-        </UInput>
+        />
       </UFormField>
     </div>
 
-    <!-- Notes -->
-    <UFormField label="Notes" name="notes" :ui="formFieldUi">
-      <UTextarea
-        v-model="state.notes"
-        placeholder="Any additional notes about your pet…"
-        :rows="3"
-        size="lg"
-        class="w-full"
-      />
-    </UFormField>
+    <!-- ── Section: Privacy ───────────────────────────────────────── -->
+    <div class="flex items-center gap-3">
+      <p
+        class="text-[10px] font-semibold uppercase text-[#a49bc9] shrink-0"
+        style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
+      >
+        Privacy
+      </p>
+      <div class="flex-1 h-px" style="background: #362d59" />
+    </div>
 
-    <!-- isPublic toggle -->
-    <div class="flex items-center justify-between py-1">
+    <div
+      class="flex items-center justify-between rounded-xl px-4 py-3"
+      style="background: #1f1633; border: 1px solid #362d59"
+    >
       <div>
         <p
           class="text-[#e5e7eb] text-sm font-medium"
@@ -187,20 +234,26 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
         >
           Public profile
         </p>
-        <p class="text-[#a49bc9] text-xs mt-0.5">
+        <p class="text-[#a49bc9] text-xs mt-0.5" style="font-family: Rubik, sans-serif">
           Allow others to view this pet's profile
         </p>
       </div>
       <UToggle v-model="state.isPublic" color="primary" />
     </div>
 
-    <!-- Submit -->
+    <!-- ── Submit ─────────────────────────────────────────────────── -->
     <div class="pt-2">
       <button
         type="submit"
         :disabled="loading"
         class="w-full h-11 rounded-[13px] text-white text-sm font-bold uppercase tracking-wider transition-shadow duration-150 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-        style="background-color: #79628c; border: 1px solid #584674; box-shadow: rgba(0,0,0,0.1) 0px 1px 3px 0px inset; font-family: Rubik, sans-serif; letter-spacing: 0.2px"
+        style="
+          background-color: #79628c;
+          border: 1px solid #584674;
+          box-shadow: rgba(0,0,0,0.1) 0px 1px 3px 0px inset;
+          font-family: Rubik, sans-serif;
+          letter-spacing: 0.2px;
+        "
         onmouseover="if (!this.disabled) this.style.boxShadow='rgba(0,0,0,0.18) 0px 0.5rem 1.5rem, rgba(0,0,0,0.1) 0px 1px 3px 0px inset'"
         onmouseout="this.style.boxShadow='rgba(0,0,0,0.1) 0px 1px 3px 0px inset'"
       >
