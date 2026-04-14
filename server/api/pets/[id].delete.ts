@@ -1,4 +1,5 @@
 import { deletePet } from '~~/server/services/pet.service'
+import { deleteFile } from '~~/server/utils/storage'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -18,8 +19,7 @@ export default defineEventHandler(async (event) => {
   const pet = await deletePet(id, session.user.id)
 
   if (pet.photo) {
-    // TODO: delete photo from storage once a storage utility is available
-    console.warn(`[pet-delete] Photo cleanup needed for pet ${id}: ${pet.photo}`)
+    await deleteFile(pet.photo)
   }
 
   return { message: 'Pet deleted successfully' }
