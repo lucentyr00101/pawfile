@@ -70,9 +70,8 @@ const PetSchema = new Schema<IPet>(
 
 PetSchema.index({ userId: 1 })
 
-PetSchema.pre('save', function (next) {
+PetSchema.pre('save', async function () {
   this.updatedAt = new Date()
-  next()
 })
 
 export const Pet = mongoose.models.Pet ?? mongoose.model<IPet>('Pet', PetSchema)
