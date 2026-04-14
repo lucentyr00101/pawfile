@@ -43,4 +43,5 @@ export async function deletePet(petId: string, userId: string) {
   if (!pet) {
     throw createError({ statusCode: 404, statusMessage: 'Pet not found' })
   }
+  return pet
 }
