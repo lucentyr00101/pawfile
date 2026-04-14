@@ -7,7 +7,7 @@ export interface CreatePetInput {
   birthday?: Date
   gender?: 'male' | 'female' | 'unknown'
   weight?: number
-  photo?: string
+  photo?: string | null
   isPublic?: boolean
   notes?: string
 }
