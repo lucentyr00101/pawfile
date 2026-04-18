@@ -238,7 +238,7 @@ const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
           Allow others to view this pet's profile
         </p>
       </div>
-      <UToggle v-model="state.isPublic" color="primary" />
+      <USwitch v-model="state.isPublic" color="primary" />
     </div>
 
     <!-- ── Submit ─────────────────────────────────────────────────── -->
