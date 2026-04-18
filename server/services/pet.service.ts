@@ -30,6 +30,17 @@ export async function getPetById(petId: string, userId: string) {
   return pet
 }
 
+export async function getPublicPetById(petId: string) {
+  const pet = await Pet.findById(petId).select('name species breed birthday gender photo isPublic')
+  if (!pet) {
+    throw createError({ statusCode: 404, statusMessage: 'Pet not found' })
+  }
+  if (!pet.isPublic) {
+    throw createError({ statusCode: 403, statusMessage: 'This profile is private' })
+  }
+  return pet
+}
+
 export async function updatePet(petId: string, userId: string, data: UpdatePetInput) {
   const pet = await Pet.findOneAndUpdate({ _id: petId, userId }, data, { new: true, runValidators: true })
   if (!pet) {
