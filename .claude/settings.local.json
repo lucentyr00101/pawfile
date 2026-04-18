@@ -13,7 +13,12 @@
       "Bash(gh api:*)",
       "Bash(gh issue:*)",
       "Bash(git fetch:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(mkdir -p .design-tmp)",
+      "Bash(tar -xzf \"C:\\\\Users\\\\Meliodas\\\\.claude\\\\projects\\\\G--Libraries-Documents---self-rojects-pawfile\\\\743e361b-7652-4bb7-a49c-5217e96b0787\\\\tool-results\\\\webfetch-1776502334010-wmjkd2.bin\" -C .design-tmp)",
+      "Bash(cp \"/c/Users/Meliodas/.claude/projects/G--Libraries-Documents---self-rojects-pawfile/743e361b-7652-4bb7-a49c-5217e96b0787/tool-results/webfetch-1776502334010-wmjkd2.bin\" .design-tmp.tar.gz)",
+      "Bash(tar -xzf .design-tmp.tar.gz -C .design-tmp)"
     ]
   }
 }

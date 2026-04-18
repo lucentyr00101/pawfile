@@ -20,7 +20,7 @@ const route = useRoute()
 const id = route.params.id as string
 const toast = useToast()
 
-const { data: pet, status, error } = useFetch<Pet>(`/api/pets/${id}`, { lazy: true })
+const { data: pet, status, error, refresh } = useFetch<Pet>(`/api/pets/${id}`, { lazy: true })
 
 const isLoading = computed(() => status.value === 'pending')
 
@@ -77,6 +77,142 @@ const tabs: { id: TabId, label: string, icon: string }[] = [
 
 const isDeleteOpen = ref(false)
 const isDeleting = ref(false)
+
+// Photo upload state
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024
+
+const fileInput = ref<HTMLInputElement | null>(null)
+const isPreviewOpen = ref(false)
+const isUploading = ref(false)
+const selectedFile = ref<File | null>(null)
+const previewUrl = ref<string | null>(null)
+const isRemoveOpen = ref(false)
+const isRemoving = ref(false)
+
+function openFilePicker() {
+  fileInput.value?.click()
+}
+
+function resetFileInput() {
+  if (fileInput.value) fileInput.value.value = ''
+}
+
+function clearPreview() {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  previewUrl.value = null
+  selectedFile.value = null
+}
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+    toast.add({
+      title: 'Unsupported file type',
+      description: 'Photo must be a JPEG, PNG, or WebP image.',
+      color: 'error',
+    })
+    resetFileInput()
+    return
+  }
+
+  if (file.size > MAX_PHOTO_SIZE) {
+    toast.add({
+      title: 'File too large',
+      description: 'Photo must be 5MB or smaller.',
+      color: 'error',
+    })
+    resetFileInput()
+    return
+  }
+
+  clearPreview()
+  selectedFile.value = file
+  previewUrl.value = URL.createObjectURL(file)
+  isPreviewOpen.value = true
+}
+
+function cancelPreview() {
+  isPreviewOpen.value = false
+  clearPreview()
+  resetFileInput()
+}
+
+async function confirmUpload() {
+  if (!selectedFile.value) return
+
+  isUploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('photo', selectedFile.value)
+    await $fetch(`/api/pets/${id}/photo`, { method: 'POST', body: formData })
+    await refresh()
+    toast.add({
+      title: 'Photo updated',
+      description: `${pet.value?.name}'s photo has been updated.`,
+      color: 'success',
+    })
+    isPreviewOpen.value = false
+    clearPreview()
+    resetFileInput()
+  }
+  catch (err: unknown) {
+    const e = err as { data?: { statusMessage?: string, message?: string } }
+    const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
+    toast.add({ title: 'Upload failed', description: message, color: 'error' })
+  }
+  finally {
+    isUploading.value = false
+  }
+}
+
+async function confirmRemovePhoto() {
+  isRemoving.value = true
+  try {
+    await $fetch(`/api/pets/${id}/photo`, { method: 'DELETE' })
+    await refresh()
+    toast.add({
+      title: 'Photo removed',
+      description: `${pet.value?.name}'s photo has been removed.`,
+      color: 'success',
+    })
+    isRemoveOpen.value = false
+  }
+  catch (err: unknown) {
+    const e = err as { data?: { statusMessage?: string, message?: string } }
+    const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
+    toast.add({ title: 'Failed to remove photo', description: message, color: 'error' })
+  }
+  finally {
+    isRemoving.value = false
+  }
+}
+
+const photoMenuItems = computed(() => {
+  const items: { label: string, icon: string, onSelect: () => void, color?: 'error' }[] = [
+    {
+      label: 'Change photo',
+      icon: 'i-heroicons-arrow-up-tray',
+      onSelect: openFilePicker,
+    },
+  ]
+  if (pet.value?.photo) {
+    items.push({
+      label: 'Remove photo',
+      icon: 'i-heroicons-trash',
+      color: 'error',
+      onSelect: () => { isRemoveOpen.value = true },
+    })
+  }
+  return items
+})
+
+onBeforeUnmount(() => {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+})
 
 async function confirmDelete() {
   isDeleting.value = true
@@ -158,7 +294,14 @@ function capitalize(str: string) {
       >
         <!-- Avatar -->
         <div class="relative">
-          <div style="box-shadow: 0 0 40px rgba(106,95,193,0.3); border-radius: 50%">
+          <button
+            type="button"
+            class="group relative rounded-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
+            style="box-shadow: 0 0 40px rgba(106,95,193,0.3)"
+            :aria-label="pet.photo ? 'Change or remove photo' : 'Add photo'"
+            :disabled="isUploading || isRemoving"
+            @click="openFilePicker"
+          >
             <UAvatar
               :src="pet.photo"
               :icon="!pet.photo ? 'i-heroicons-user' : undefined"
@@ -166,13 +309,27 @@ function capitalize(str: string) {
               size="3xl"
               class="ring-2 ring-[#362d59]"
             />
-          </div>
+            <span
+              class="absolute inset-0 rounded-full flex flex-col items-center justify-center gap-1 text-white text-[10px] font-semibold uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+              style="background: rgba(21,15,35,0.65); letter-spacing: 0.3px; font-family: Rubik, sans-serif"
+            >
+              <UIcon name="i-heroicons-camera" class="w-5 h-5" />
+              <span>{{ pet.photo ? 'Change' : 'Add photo' }}</span>
+            </span>
+          </button>
           <span
             v-if="pet.isPublic"
-            class="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full"
+            class="pointer-events-none absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full"
             style="background: #c2ef4e; border: 2px solid #150f23"
             title="Public profile"
           />
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            class="hidden"
+            @change="onFileChange"
+          >
         </div>
 
         <!-- Identity + stats -->
@@ -230,6 +387,15 @@ function capitalize(str: string) {
 
         <!-- Action buttons -->
         <div class="flex gap-2 self-start">
+          <UDropdownMenu :items="photoMenuItems">
+            <UButton
+              color="secondary"
+              variant="ghost"
+              icon="i-heroicons-photo"
+              size="sm"
+              aria-label="Photo options"
+            />
+          </UDropdownMenu>
           <UButton
             :to="`/pets/${id}/edit`"
             color="secondary"
@@ -485,6 +651,78 @@ function capitalize(str: string) {
       </PanelCard>
 
     </template>
+
+    <!-- Photo preview / upload modal -->
+    <UModal v-model:open="isPreviewOpen" title="Upload photo" :dismissible="!isUploading">
+      <template #body>
+        <div class="flex flex-col items-center gap-4">
+          <div
+            class="w-full rounded-xl overflow-hidden flex items-center justify-center"
+            style="background: #1f1633; border: 1px solid #362d59; min-height: 220px"
+          >
+            <img
+              v-if="previewUrl"
+              :src="previewUrl"
+              :alt="selectedFile?.name"
+              class="max-h-[320px] w-auto object-contain"
+            >
+          </div>
+          <p
+            v-if="selectedFile"
+            class="text-[#a49bc9] text-xs truncate w-full text-center"
+            style="font-family: Rubik, sans-serif"
+          >
+            {{ selectedFile.name }} · {{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex items-center justify-end gap-3 w-full">
+          <UButton
+            variant="ghost"
+            :disabled="isUploading"
+            @click="cancelPreview"
+          >
+            Cancel
+          </UButton>
+          <UButton
+            color="primary"
+            :loading="isUploading"
+            @click="confirmUpload"
+          >
+            Upload
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Remove photo confirmation modal -->
+    <UModal v-model:open="isRemoveOpen" title="Remove Photo">
+      <template #body>
+        <p class="text-[#e5e7eb] text-sm" style="font-family: Rubik, sans-serif">
+          Are you sure you want to remove
+          <strong class="text-white">{{ pet?.name }}</strong>'s photo?
+        </p>
+      </template>
+      <template #footer>
+        <div class="flex items-center justify-end gap-3 w-full">
+          <UButton
+            variant="ghost"
+            :disabled="isRemoving"
+            @click="isRemoveOpen = false"
+          >
+            Cancel
+          </UButton>
+          <UButton
+            color="error"
+            :loading="isRemoving"
+            @click="confirmRemovePhoto"
+          >
+            Remove
+          </UButton>
+        </div>
+      </template>
+    </UModal>
 
     <!-- Delete confirmation modal -->
     <UModal v-model:open="isDeleteOpen" title="Delete Pet">
