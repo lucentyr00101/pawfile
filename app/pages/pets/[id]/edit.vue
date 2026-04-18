@@ -148,6 +148,15 @@ async function onSubmit(data: PetFormData) {
         }"
       >
         <PetForm :pet="pet" :loading="isSaving" @submit="onSubmit" />
+        <div class="flex justify-center pt-4">
+          <NuxtLink
+            :to="`/pets/${id}`"
+            class="text-sm text-[#a49bc9] hover:text-white transition-colors"
+            style="font-family: Rubik, sans-serif"
+          >
+            Cancel
+          </NuxtLink>
+        </div>
       </UCard>
     </template>
 
