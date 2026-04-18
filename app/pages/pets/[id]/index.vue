@@ -725,12 +725,12 @@ function capitalize(str: string) {
     </UModal>
 
     <!-- Delete confirmation modal -->
-    <UModal v-model:open="isDeleteOpen" title="Delete Pet">
+    <UModal v-model:open="isDeleteOpen" title="Delete Pet" :dismissible="!isDeleting">
       <template #body>
         <p class="text-[#e5e7eb] text-sm" style="font-family: Rubik, sans-serif">
           Are you sure you want to delete
           <strong class="text-white">{{ pet?.name }}</strong>?
-          This action cannot be undone.
+          This can't be undone.
         </p>
       </template>
       <template #footer>
