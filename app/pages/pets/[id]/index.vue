@@ -63,6 +63,18 @@ const petAge = computed(() => {
   return `${months} ${months === 1 ? 'month' : 'months'} old`
 })
 
+type TabId = 'overview' | 'timeline' | 'vaccines' | 'vets' | 'meds' | 'documents'
+const tab = ref<TabId>('overview')
+
+const tabs: { id: TabId, label: string, icon: string }[] = [
+  { id: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
+  { id: 'timeline', label: 'Timeline', icon: 'i-heroicons-clock' },
+  { id: 'vaccines', label: 'Vaccinations', icon: 'i-heroicons-beaker' },
+  { id: 'vets', label: 'Vet Visits', icon: 'i-heroicons-clipboard-document-list' },
+  { id: 'meds', label: 'Medications', icon: 'i-heroicons-sparkles' },
+  { id: 'documents', label: 'Documents', icon: 'i-heroicons-document' },
+]
+
 const isDeleteOpen = ref(false)
 const isDeleting = ref(false)
 
@@ -78,7 +90,7 @@ async function confirmDelete() {
     await navigateTo('/dashboard')
   }
   catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string; message?: string } }
+    const e = err as { data?: { statusMessage?: string, message?: string } }
     const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
     toast.add({ title: 'Failed to delete pet', description: message, color: 'error' })
   }
@@ -93,38 +105,30 @@ function capitalize(str: string) {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto w-full px-4 sm:px-6 py-8 flex flex-col gap-8">
+  <div class="w-full px-4 sm:px-6 lg:px-8 py-7 flex flex-col gap-5 min-w-0">
 
-    <!-- Back link -->
+    <!-- Breadcrumb -->
     <NuxtLink
       to="/dashboard"
-      class="flex items-center gap-1.5 text-sm text-[#a49bc9] hover:text-white transition-colors w-fit"
+      class="inline-flex items-center gap-1.5 text-[13px] text-[#a49bc9] hover:text-white transition-colors w-fit"
       style="font-family: Rubik, sans-serif"
     >
-      <UIcon name="i-heroicons-arrow-left" class="w-4 h-4 shrink-0" />
-      Back to Dashboard
+      <UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5 shrink-0" />
+      <span>Dashboard / My Pets{{ pet ? ' /' : '' }}</span>
+      <span v-if="pet" class="text-white">{{ pet.name }}</span>
     </NuxtLink>
 
-    <!-- Loading skeleton -->
+    <!-- Loading -->
     <template v-if="isLoading">
-      <!-- Hero skeleton -->
-      <div class="flex flex-col items-center gap-4 py-4">
-        <USkeleton class="w-24 h-24 rounded-full" />
-        <div class="flex flex-col items-center gap-2">
-          <USkeleton class="h-3 w-16 rounded" />
-          <USkeleton class="h-7 w-40 rounded" />
-          <USkeleton class="h-4 w-24 rounded" />
-        </div>
-        <div class="flex gap-2 mt-1">
-          <USkeleton class="h-9 w-20 rounded-lg" />
-          <USkeleton class="h-9 w-20 rounded-lg" />
-        </div>
+      <USkeleton class="h-44 rounded-2xl" />
+      <USkeleton class="h-12 w-full max-w-xl rounded-xl" />
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+        <USkeleton class="h-72 rounded-2xl xl:col-span-2" />
+        <USkeleton class="h-72 rounded-2xl" />
       </div>
-      <!-- Card skeleton -->
-      <USkeleton class="h-52 rounded-2xl" />
     </template>
 
-    <!-- Error state -->
+    <!-- Error -->
     <template v-else-if="error">
       <div class="flex flex-col items-center justify-center py-20 text-center">
         <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 text-[#a49bc9] mb-4" />
@@ -143,60 +147,95 @@ function capitalize(str: string) {
     <!-- Pet profile -->
     <template v-else-if="pet">
 
-      <!-- Hero: centred avatar + identity + actions -->
+      <!-- Hero -->
       <div
-        class="flex flex-col items-center gap-5 rounded-2xl px-6 py-8 text-center"
-        style="background: #150f23; border: 1px solid #362d59"
+        class="rounded-2xl p-6 grid gap-6 items-center"
+        style="
+          background: #150f23;
+          border: 1px solid #362d59;
+          grid-template-columns: auto 1fr auto;
+        "
       >
         <!-- Avatar -->
         <div class="relative">
-          <UAvatar
-            :src="pet.photo"
-            :icon="!pet.photo ? 'i-heroicons-user' : undefined"
-            :alt="pet.photo ? pet.name : undefined"
-            size="3xl"
-            class="ring-2 ring-[#362d59]"
-            style="box-shadow: 0 0 40px rgba(106, 95, 193, 0.2)"
-          />
-          <!-- Public indicator dot -->
+          <div style="box-shadow: 0 0 40px rgba(106,95,193,0.3); border-radius: 50%">
+            <UAvatar
+              :src="pet.photo"
+              :icon="!pet.photo ? 'i-heroicons-user' : undefined"
+              :alt="pet.photo ? pet.name : undefined"
+              size="3xl"
+              class="ring-2 ring-[#362d59]"
+            />
+          </div>
           <span
             v-if="pet.isPublic"
-            class="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2"
-            style="background: #c2ef4e; border-color: #150f23"
+            class="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full"
+            style="background: #c2ef4e; border: 2px solid #150f23"
             title="Public profile"
           />
         </div>
 
-        <!-- Identity -->
-        <div class="flex flex-col items-center gap-1">
-          <p
-            class="text-[10px] font-semibold uppercase text-[#a49bc9]"
-            style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
-          >
-            {{ pet.species }}
-          </p>
+        <!-- Identity + stats -->
+        <div class="min-w-0" style="font-family: Rubik, sans-serif">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span
+              class="text-[10px] font-bold uppercase text-[#a49bc9]"
+              style="letter-spacing: 0.3px"
+            >{{ pet.species }}</span>
+            <span
+              v-if="pet.isPublic"
+              class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
+              style="
+                color: #c2ef4e;
+                background: color-mix(in oklch, #c2ef4e 12%, transparent);
+                border: 1px solid color-mix(in oklch, #c2ef4e 35%, transparent);
+                letter-spacing: 0.3px;
+              "
+            >Public profile</span>
+          </div>
           <h1
-            class="text-white text-2xl font-semibold leading-tight"
-            style="font-family: Rubik, sans-serif"
+            class="mt-1 mb-0.5 text-white text-[26px] sm:text-[28px] font-semibold leading-tight"
+            style="letter-spacing: -0.01em"
           >
             {{ pet.name }}
           </h1>
-          <p
-            v-if="pet.breed"
-            class="text-[#a49bc9] text-sm"
-            style="font-family: Rubik, sans-serif"
-          >
-            {{ pet.breed }}
-          </p>
+          <div class="text-[#a49bc9] text-sm">
+            {{ pet.breed || '—' }}
+            <template v-if="petAge"> · {{ petAge }}</template>
+            <template v-if="pet.weight != null"> · {{ pet.weight }} kg</template>
+          </div>
+
+          <!-- Vital stats -->
+          <div class="flex gap-5 mt-3.5 flex-wrap">
+            <div
+              v-for="(s, i) in [
+                { k: 'VACCINES', v: '—', tone: '#a49bc9' },
+                { k: 'LAST VET', v: '—', tone: '#a49bc9' },
+                { k: 'MEDS', v: '—', tone: '#a49bc9' },
+                { k: 'NEXT DUE', v: '—', tone: '#a49bc9' },
+              ]"
+              :key="i"
+            >
+              <div
+                class="text-[10px] font-semibold uppercase text-[#a49bc9] whitespace-nowrap"
+                style="letter-spacing: 0.25px"
+              >{{ s.k }}</div>
+              <div
+                class="text-sm font-semibold mt-0.5 whitespace-nowrap"
+                :style="{ color: s.tone }"
+              >{{ s.v }}</div>
+            </div>
+          </div>
         </div>
 
         <!-- Action buttons -->
-        <div class="flex items-center gap-2">
+        <div class="flex gap-2 self-start">
           <UButton
             :to="`/pets/${id}/edit`"
             color="secondary"
             variant="solid"
             icon="i-heroicons-pencil-square"
+            size="sm"
           >
             Edit
           </UButton>
@@ -204,99 +243,246 @@ function capitalize(str: string) {
             color="error"
             variant="ghost"
             icon="i-heroicons-trash"
+            size="sm"
             @click="isDeleteOpen = true"
-          >
-            Delete
-          </UButton>
+          />
         </div>
       </div>
 
-      <!-- Details card -->
-      <UCard
-        :ui="{
-          root: 'bg-dusk-950 border border-border-dark rounded-2xl',
-        }"
+      <!-- Tabs -->
+      <div
+        class="flex gap-1 p-1 w-fit max-w-full overflow-x-auto rounded-xl"
+        style="background: #150f23; border: 1px solid #362d59; font-family: Rubik, sans-serif"
       >
-        <!-- Section label -->
-        <div class="flex items-center gap-3 mb-4">
-          <p
-            class="text-[10px] font-semibold uppercase text-[#a49bc9] shrink-0"
-            style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
+        <button
+          v-for="t in tabs"
+          :key="t.id"
+          class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] cursor-pointer transition-colors whitespace-nowrap"
+          :class="t.id === tab ? 'text-white font-semibold' : 'text-[#a49bc9] font-medium hover:text-white'"
+          :style="t.id === tab ? 'background: #422082' : 'background: transparent'"
+          @click="tab = t.id"
+        >
+          <UIcon :name="t.icon" class="w-3.5 h-3.5" />
+          {{ t.label }}
+        </button>
+      </div>
+
+      <!-- Overview tab -->
+      <div
+        v-if="tab === 'overview'"
+        class="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start"
+      >
+        <!-- Left column -->
+        <div class="flex flex-col gap-5 xl:col-span-2 min-w-0">
+          <PanelCard
+            title="Timeline"
+            subtitle="Everything logged for this pet"
+            icon="i-heroicons-clock"
+            :padded="false"
           >
-            Details
-          </p>
-          <div class="flex-1 h-px" style="background: #362d59" />
+            <EmptyBlock
+              icon="i-heroicons-clock"
+              title="No events logged yet"
+              desc="Vet visits, vaccinations, medications, and milestones will show up here in chronological order."
+            />
+          </PanelCard>
+
+          <PanelCard
+            title="Vaccinations"
+            subtitle="Track renewals and intervals"
+            icon="i-heroicons-beaker"
+            :padded="false"
+          >
+            <EmptyBlock
+              icon="i-heroicons-beaker"
+              title="No vaccinations tracked"
+              :desc="`Add ${pet.name}'s vaccinations to monitor renewals and stay on schedule.`"
+            />
+          </PanelCard>
         </div>
 
-        <div class="divide-y divide-[#362d59]">
-          <!-- Birthday -->
-          <div class="flex items-start justify-between py-3 first:pt-0">
-            <p
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] pt-0.5 shrink-0"
-              style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
+        <!-- Right column -->
+        <div class="flex flex-col gap-5 min-w-0">
+          <PanelCard title="Details" icon="i-heroicons-identification">
+            <div class="px-5">
+              <div
+                class="flex justify-between items-center py-3"
+                style="border-bottom: 1px solid #362d59; font-family: Rubik, sans-serif"
+              >
+                <span
+                  class="text-[10px] font-semibold uppercase text-[#a49bc9]"
+                  style="letter-spacing: 0.25px"
+                >Birthday</span>
+                <span class="text-sm text-right">
+                  <template v-if="formattedBirthday">
+                    <span class="text-white">{{ formattedBirthday }}</span>
+                    <span class="text-[#a49bc9] ml-1">· {{ petAge }}</span>
+                  </template>
+                  <span v-else class="text-[#a49bc9]">—</span>
+                </span>
+              </div>
+              <div
+                class="flex justify-between items-center py-3"
+                style="border-bottom: 1px solid #362d59; font-family: Rubik, sans-serif"
+              >
+                <span
+                  class="text-[10px] font-semibold uppercase text-[#a49bc9]"
+                  style="letter-spacing: 0.25px"
+                >Gender</span>
+                <span
+                  class="text-sm"
+                  :class="pet.gender ? 'text-white' : 'text-[#a49bc9]'"
+                >{{ pet.gender ? capitalize(pet.gender) : '—' }}</span>
+              </div>
+              <div
+                class="flex justify-between items-center py-3"
+                style="border-bottom: 1px solid #362d59; font-family: Rubik, sans-serif"
+              >
+                <span
+                  class="text-[10px] font-semibold uppercase text-[#a49bc9]"
+                  style="letter-spacing: 0.25px"
+                >Weight</span>
+                <span class="text-sm">
+                  <template v-if="pet.weight != null">
+                    <span class="text-white">{{ pet.weight }}</span>
+                    <span class="text-[#a49bc9] ml-1">kg</span>
+                  </template>
+                  <span v-else class="text-[#a49bc9]">—</span>
+                </span>
+              </div>
+              <div
+                class="flex justify-between items-center py-3"
+                style="font-family: Rubik, sans-serif"
+              >
+                <span
+                  class="text-[10px] font-semibold uppercase text-[#a49bc9]"
+                  style="letter-spacing: 0.25px"
+                >Visibility</span>
+                <span class="text-sm text-white">
+                  {{ pet.isPublic ? 'Public' : 'Private' }}
+                </span>
+              </div>
+            </div>
+            <div
+              v-if="pet.notes"
+              class="px-5 pt-3 pb-4"
+              style="border-top: 1px solid #362d59"
             >
-              Birthday
-            </p>
-            <p class="text-sm text-right" style="font-family: Rubik, sans-serif">
-              <template v-if="formattedBirthday">
-                <span class="text-white">{{ formattedBirthday }}</span>
-                <span class="text-[#a49bc9] ml-1">· {{ petAge }}</span>
-              </template>
-              <span v-else class="text-[#a49bc9]">—</span>
-            </p>
-          </div>
+              <div
+                class="text-[10px] font-semibold uppercase text-[#a49bc9] mb-1.5"
+                style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
+              >Notes</div>
+              <div
+                class="text-[#e5e7eb] text-[13px] leading-relaxed whitespace-pre-wrap"
+                style="font-family: Rubik, sans-serif"
+              >
+                {{ pet.notes }}
+              </div>
+            </div>
+          </PanelCard>
 
-          <!-- Gender -->
-          <div class="flex items-center justify-between py-3">
-            <p
-              class="text-[10px] font-semibold uppercase text-[#a49bc9]"
-              style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
-            >
-              Gender
-            </p>
-            <p
-              class="text-sm"
-              :class="pet.gender ? 'text-white' : 'text-[#a49bc9]'"
-              style="font-family: Rubik, sans-serif"
-            >
-              {{ pet.gender ? capitalize(pet.gender) : '—' }}
-            </p>
-          </div>
+          <PanelCard
+            title="Weight"
+            subtitle="History coming soon"
+            icon="i-heroicons-scale"
+            :padded="false"
+          >
+            <div class="px-5 py-5" style="font-family: Rubik, sans-serif">
+              <div class="flex items-baseline gap-2.5">
+                <span
+                  class="text-white text-[28px] font-bold"
+                  style="letter-spacing: -0.01em"
+                >{{ pet.weight ?? '—' }}</span>
+                <span class="text-[#a49bc9] text-sm">{{ pet.weight != null ? 'kg' : '' }}</span>
+              </div>
+              <div class="text-[#a49bc9] text-xs mt-2">
+                Log weight over time to see trends here.
+              </div>
+            </div>
+          </PanelCard>
 
-          <!-- Weight -->
-          <div class="flex items-center justify-between py-3">
-            <p
-              class="text-[10px] font-semibold uppercase text-[#a49bc9]"
-              style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
-            >
-              Weight
-            </p>
-            <p class="text-sm" style="font-family: Rubik, sans-serif">
-              <template v-if="pet.weight != null">
-                <span class="text-white">{{ pet.weight }}</span>
-                <span class="text-[#a49bc9] ml-1">kg</span>
-              </template>
-              <span v-else class="text-[#a49bc9]">—</span>
-            </p>
-          </div>
-
-          <!-- Notes -->
-          <div v-if="pet.notes" class="flex flex-col gap-2 py-3 last:pb-0">
-            <p
-              class="text-[10px] font-semibold uppercase text-[#a49bc9]"
-              style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
-            >
-              Notes
-            </p>
-            <p
-              class="text-white text-sm leading-relaxed whitespace-pre-wrap"
-              style="font-family: Rubik, sans-serif"
-            >
-              {{ pet.notes }}
-            </p>
-          </div>
+          <PanelCard
+            title="Documents"
+            subtitle="Lab results, prescriptions, certificates"
+            icon="i-heroicons-document"
+            :padded="false"
+          >
+            <EmptyBlock
+              icon="i-heroicons-document"
+              title="No documents yet"
+              desc="Upload PDFs and images to keep all of your pet's records in one place."
+            />
+          </PanelCard>
         </div>
-      </UCard>
+      </div>
+
+      <!-- Other tabs (placeholder until backed by data) -->
+      <PanelCard
+        v-else-if="tab === 'timeline'"
+        title="Full Timeline"
+        subtitle="All events for this pet"
+        icon="i-heroicons-clock"
+        :padded="false"
+      >
+        <EmptyBlock
+          icon="i-heroicons-clock"
+          title="No events logged yet"
+          desc="Once you log vet visits, vaccinations, medications and milestones, they'll appear here."
+        />
+      </PanelCard>
+
+      <PanelCard
+        v-else-if="tab === 'vaccines'"
+        title="Vaccinations"
+        subtitle="Track renewals and intervals"
+        icon="i-heroicons-beaker"
+        :padded="false"
+      >
+        <EmptyBlock
+          icon="i-heroicons-beaker"
+          title="No vaccinations tracked"
+          :desc="`Add ${pet.name}'s vaccinations to monitor renewals and stay on schedule.`"
+        />
+      </PanelCard>
+
+      <PanelCard
+        v-else-if="tab === 'vets'"
+        title="Vet Visits"
+        icon="i-heroicons-clipboard-document-list"
+        :padded="false"
+      >
+        <EmptyBlock
+          icon="i-heroicons-clipboard-document-list"
+          title="No vet visits logged"
+          :desc="`Record ${pet.name}'s checkups, treatments, and consultations.`"
+        />
+      </PanelCard>
+
+      <PanelCard
+        v-else-if="tab === 'meds'"
+        title="Medications"
+        icon="i-heroicons-sparkles"
+        :padded="false"
+      >
+        <EmptyBlock
+          icon="i-heroicons-sparkles"
+          title="No active medications"
+          :desc="`Track ${pet.name}'s prescriptions, dosages, and schedules.`"
+        />
+      </PanelCard>
+
+      <PanelCard
+        v-else-if="tab === 'documents'"
+        title="All Documents"
+        icon="i-heroicons-document"
+        :padded="false"
+      >
+        <EmptyBlock
+          icon="i-heroicons-document"
+          title="No documents yet"
+          desc="Upload PDFs and images to keep all of your pet's records in one place."
+        />
+      </PanelCard>
 
     </template>
 
