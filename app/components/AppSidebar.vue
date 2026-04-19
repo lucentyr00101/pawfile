@@ -14,7 +14,7 @@ interface NavItem {
 
 const items: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'i-heroicons-home', to: '/dashboard' },
-  { id: 'pets', label: 'My Pets', icon: 'i-heroicons-heart', to: '/dashboard' },
+  { id: 'pets', label: 'My Pets', icon: 'i-heroicons-heart', to: '/pets' },
   { id: 'reminders', label: 'Reminders', icon: 'i-heroicons-bell', disabled: true },
   { id: 'timeline', label: 'Timeline', icon: 'i-heroicons-clock', disabled: true },
   { id: 'vaccines', label: 'Vaccinations', icon: 'i-heroicons-beaker', disabled: true },
@@ -32,7 +32,7 @@ const userInitial = computed(() => user.value?.name?.[0]?.toUpperCase() ?? 'U')
 
 function isActive(item: NavItem): boolean {
   if (!item.to) return false
-  if (item.id === 'pets') return route.path.startsWith('/pets')
+  if (item.id === 'pets') return route.path === '/pets' || route.path.startsWith('/pets/')
   if (item.id === 'dashboard') return route.path === '/dashboard'
   return route.path === item.to
 }
