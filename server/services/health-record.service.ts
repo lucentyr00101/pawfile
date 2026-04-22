@@ -68,6 +68,27 @@ export async function addAttachment(userId: string, petId: string, recordId: str
   return record
 }
 
+export async function removeAttachment(userId: string, petId: string, recordId: string, url: string) {
+  const record = await HealthRecord.findOne({ _id: recordId, userId, petId })
+  if (!record) {
+    throw createError({ statusCode: 404, statusMessage: 'Health record not found' })
+  }
+
+  if (!record.attachments?.includes(url)) {
+    throw createError({ statusCode: 404, statusMessage: 'Attachment not found in health record' })
+  }
+
+  await deleteFile(url)
+
+  const updated = await HealthRecord.findOneAndUpdate(
+    { _id: recordId, userId, petId },
+    { $pull: { attachments: url } },
+    { new: true },
+  )
+
+  return updated
+}
+
 export async function deleteRecord(userId: string, recordId: string) {
   const record = await HealthRecord.findOneAndDelete({ _id: recordId, userId })
   if (!record) {
