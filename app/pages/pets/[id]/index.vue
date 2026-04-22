@@ -65,15 +65,13 @@ const petAge = computed(() => {
   return `${months} ${months === 1 ? 'month' : 'months'} old`
 })
 
-type TabId = 'overview' | 'health' | 'timeline' | 'vaccines' | 'vets' | 'meds' | 'documents'
+type TabId = 'overview' | 'health' | 'timeline' | 'meds' | 'documents'
 const tab = ref<TabId>('overview')
 
 const tabs: { id: TabId, label: string, icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
   { id: 'health', label: 'Health Records', icon: 'i-heroicons-heart' },
   { id: 'timeline', label: 'Timeline', icon: 'i-heroicons-clock' },
-  { id: 'vaccines', label: 'Vaccinations', icon: 'i-heroicons-beaker' },
-  { id: 'vets', label: 'Vet Visits', icon: 'i-heroicons-clipboard-document-list' },
   { id: 'meds', label: 'Medications', icon: 'i-heroicons-sparkles' },
   { id: 'documents', label: 'Documents', icon: 'i-heroicons-document' },
 ]
@@ -517,18 +515,6 @@ function capitalize(str: string) {
             />
           </PanelCard>
 
-          <PanelCard
-            title="Vaccinations"
-            subtitle="Track renewals and intervals"
-            icon="i-heroicons-beaker"
-            :padded="false"
-          >
-            <EmptyBlock
-              icon="i-heroicons-beaker"
-              title="No vaccinations tracked"
-              :desc="`Add ${pet.name}'s vaccinations to monitor renewals and stay on schedule.`"
-            />
-          </PanelCard>
         </div>
 
         <!-- Right column -->
@@ -740,33 +726,6 @@ function capitalize(str: string) {
       </PanelCard>
 
       <PanelCard
-        v-else-if="tab === 'vaccines'"
-        title="Vaccinations"
-        subtitle="Track renewals and intervals"
-        icon="i-heroicons-beaker"
-        :padded="false"
-      >
-        <EmptyBlock
-          icon="i-heroicons-beaker"
-          title="No vaccinations tracked"
-          :desc="`Add ${pet.name}'s vaccinations to monitor renewals and stay on schedule.`"
-        />
-      </PanelCard>
-
-      <PanelCard
-        v-else-if="tab === 'vets'"
-        title="Vet Visits"
-        icon="i-heroicons-clipboard-document-list"
-        :padded="false"
-      >
-        <EmptyBlock
-          icon="i-heroicons-clipboard-document-list"
-          title="No vet visits logged"
-          :desc="`Record ${pet.name}'s checkups, treatments, and consultations.`"
-        />
-      </PanelCard>
-
-      <PanelCard
         v-else-if="tab === 'meds'"
         title="Medications"
         icon="i-heroicons-sparkles"
@@ -927,18 +886,6 @@ function capitalize(str: string) {
         </div>
       </template>
 
-      <template v-if="addStep === 'form'" #footer>
-        <div class="flex items-center w-full">
-          <UButton
-            variant="ghost"
-            icon="i-heroicons-arrow-left"
-            :disabled="isSaving"
-            @click="addStep = 'type'"
-          >
-            Back
-          </UButton>
-        </div>
-      </template>
     </UModal>
 
     <!-- Delete confirmation modal -->
