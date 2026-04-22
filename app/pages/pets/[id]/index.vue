@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { HealthRecord } from '~/components/health/HealthRecordCard.vue'
+
 definePageMeta({ middleware: 'auth' })
 
 interface Pet {
@@ -63,14 +65,13 @@ const petAge = computed(() => {
   return `${months} ${months === 1 ? 'month' : 'months'} old`
 })
 
-type TabId = 'overview' | 'timeline' | 'vaccines' | 'vets' | 'meds' | 'documents'
+type TabId = 'overview' | 'health' | 'timeline' | 'meds' | 'documents'
 const tab = ref<TabId>('overview')
 
 const tabs: { id: TabId, label: string, icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
+  { id: 'health', label: 'Health Records', icon: 'i-heroicons-heart' },
   { id: 'timeline', label: 'Timeline', icon: 'i-heroicons-clock' },
-  { id: 'vaccines', label: 'Vaccinations', icon: 'i-heroicons-beaker' },
-  { id: 'vets', label: 'Vet Visits', icon: 'i-heroicons-clipboard-document-list' },
   { id: 'meds', label: 'Medications', icon: 'i-heroicons-sparkles' },
   { id: 'documents', label: 'Documents', icon: 'i-heroicons-document' },
 ]
@@ -213,6 +214,67 @@ const photoMenuItems = computed(() => {
 onBeforeUnmount(() => {
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
 })
+
+// Health records
+const { data: allHealthRecords, status: healthStatus, refresh: refreshHealth } = useFetch<HealthRecord[]>(
+  `/api/pets/${id}/health-records`,
+  { lazy: true },
+)
+const isHealthLoading = computed(() => healthStatus.value === 'pending')
+const activeFilter = ref<'all' | 'vet_visit' | 'vaccination'>('all')
+const healthRecords = computed(() => {
+  if (!allHealthRecords.value) return []
+  if (activeFilter.value === 'all') return allHealthRecords.value
+  return allHealthRecords.value.filter(r => r.type === activeFilter.value)
+})
+
+// Add Record modal
+const isAddOpen = ref(false)
+const addStep = ref<'type' | 'form'>('type')
+const selectedType = ref<'vet_visit' | 'vaccination' | null>(null)
+const isSaving = ref(false)
+
+const addModalTitle = computed(() => {
+  if (addStep.value === 'type') return 'Add Health Record'
+  return selectedType.value === 'vet_visit' ? 'New Vet Visit' : 'New Vaccination'
+})
+
+function openAddRecord() {
+  addStep.value = 'type'
+  selectedType.value = null
+  isAddOpen.value = true
+}
+
+function selectType(type: 'vet_visit' | 'vaccination') {
+  selectedType.value = type
+  addStep.value = 'form'
+}
+
+interface HealthFormData {
+  type: 'vet_visit' | 'vaccination'
+  title: string
+  date: string
+  notes?: string
+  metadata?: Record<string, string | undefined>
+}
+
+async function onHealthFormSubmit(data: HealthFormData) {
+  isSaving.value = true
+  try {
+    await $fetch(`/api/pets/${id}/health-records`, { method: 'POST', body: data })
+    await refreshHealth()
+    toast.add({ title: 'Record added', description: 'Health record has been saved.', color: 'success' })
+    isAddOpen.value = false
+  }
+  catch (err: unknown) {
+    const e = err as { data?: { statusMessage?: string, message?: string } }
+    const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
+    toast.add({ title: 'Failed to save', description: message, color: 'error' })
+  }
+  finally {
+    isSaving.value = false
+  }
+}
 
 async function confirmDelete() {
   isDeleting.value = true
@@ -453,18 +515,6 @@ function capitalize(str: string) {
             />
           </PanelCard>
 
-          <PanelCard
-            title="Vaccinations"
-            subtitle="Track renewals and intervals"
-            icon="i-heroicons-beaker"
-            :padded="false"
-          >
-            <EmptyBlock
-              icon="i-heroicons-beaker"
-              title="No vaccinations tracked"
-              :desc="`Add ${pet.name}'s vaccinations to monitor renewals and stay on schedule.`"
-            />
-          </PanelCard>
         </div>
 
         <!-- Right column -->
@@ -582,6 +632,84 @@ function capitalize(str: string) {
         </div>
       </div>
 
+      <!-- Health Records tab -->
+      <PanelCard
+        v-else-if="tab === 'health'"
+        title="Health Records"
+        subtitle="All health events for this pet"
+        icon="i-heroicons-heart"
+        :padded="false"
+      >
+        <template #right>
+          <UButton
+            color="primary"
+            size="sm"
+            icon="i-heroicons-plus"
+            @click="openAddRecord"
+          >
+            Add Record
+          </UButton>
+        </template>
+
+        <!-- Filter pills -->
+        <div
+          class="flex gap-2 px-5 py-3.5 flex-wrap"
+          style="border-bottom: 1px solid #362d59; font-family: Rubik, sans-serif"
+        >
+          <button
+            v-for="f in [
+              { key: 'all' as const, label: 'All' },
+              { key: 'vet_visit' as const, label: 'Vet Visits' },
+              { key: 'vaccination' as const, label: 'Vaccinations' },
+            ]"
+            :key="f.key"
+            type="button"
+            class="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-semibold uppercase cursor-pointer transition-colors"
+            :style="activeFilter === f.key
+              ? 'background: #422082; color: #fff; border: 1px solid #6a5fc1; letter-spacing: 0.2px'
+              : 'background: transparent; color: #a49bc9; border: 1px solid #362d59; letter-spacing: 0.2px'"
+            @click="activeFilter = f.key"
+          >
+            {{ f.label }}
+          </button>
+        </div>
+
+        <!-- Loading skeletons -->
+        <div v-if="isHealthLoading" class="flex flex-col gap-3 px-5 py-4">
+          <USkeleton v-for="i in 3" :key="i" class="h-[72px] rounded-xl w-full" />
+        </div>
+
+        <!-- Empty state -->
+        <EmptyBlock
+          v-else-if="!healthRecords.length"
+          icon="i-heroicons-heart"
+          title="No health records yet"
+          :desc="activeFilter === 'all'
+            ? `Start tracking ${pet.name}'s health by adding a vet visit or vaccination.`
+            : activeFilter === 'vet_visit'
+              ? 'No vet visits recorded yet.'
+              : 'No vaccinations recorded yet.'"
+        >
+          <UButton
+            color="primary"
+            size="sm"
+            icon="i-heroicons-plus"
+            @click="openAddRecord"
+          >
+            Add Record
+          </UButton>
+        </EmptyBlock>
+
+        <!-- Records list -->
+        <div v-else class="flex flex-col gap-3 px-5 py-4">
+          <HealthRecordCard
+            v-for="record in healthRecords"
+            :key="record._id"
+            :record="record"
+          />
+        </div>
+      </PanelCard>
+
       <!-- Other tabs (placeholder until backed by data) -->
       <PanelCard
         v-else-if="tab === 'timeline'"
@@ -594,33 +722,6 @@ function capitalize(str: string) {
           icon="i-heroicons-clock"
           title="No events logged yet"
           desc="Once you log vet visits, vaccinations, medications and milestones, they'll appear here."
-        />
-      </PanelCard>
-
-      <PanelCard
-        v-else-if="tab === 'vaccines'"
-        title="Vaccinations"
-        subtitle="Track renewals and intervals"
-        icon="i-heroicons-beaker"
-        :padded="false"
-      >
-        <EmptyBlock
-          icon="i-heroicons-beaker"
-          title="No vaccinations tracked"
-          :desc="`Add ${pet.name}'s vaccinations to monitor renewals and stay on schedule.`"
-        />
-      </PanelCard>
-
-      <PanelCard
-        v-else-if="tab === 'vets'"
-        title="Vet Visits"
-        icon="i-heroicons-clipboard-document-list"
-        :padded="false"
-      >
-        <EmptyBlock
-          icon="i-heroicons-clipboard-document-list"
-          title="No vet visits logged"
-          :desc="`Record ${pet.name}'s checkups, treatments, and consultations.`"
         />
       </PanelCard>
 
@@ -722,6 +823,69 @@ function capitalize(str: string) {
           </UButton>
         </div>
       </template>
+    </UModal>
+
+    <!-- Add Health Record modal -->
+    <UModal v-model:open="isAddOpen" :title="addModalTitle" :dismissible="!isSaving">
+      <template #body>
+        <!-- Step 1: Type selection -->
+        <div v-if="addStep === 'type'" class="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            class="group flex flex-col items-center gap-3 rounded-xl px-4 py-6 text-center cursor-pointer transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
+            style="background: #1f1633; border: 1px solid #362d59; font-family: Rubik, sans-serif"
+            onmouseover="this.style.borderColor='#6a5fc1'"
+            onmouseout="this.style.borderColor='#362d59'"
+            @click="selectType('vet_visit')"
+          >
+            <span
+              class="w-11 h-11 rounded-xl grid place-items-center"
+              style="background: color-mix(in oklch, #6a5fc1 15%, transparent); border: 1px solid color-mix(in oklch, #6a5fc1 35%, transparent); color: #9a8ee8"
+            >
+              <UIcon name="i-heroicons-clipboard-document-list" class="w-5 h-5" />
+            </span>
+            <div>
+              <div class="text-white text-sm font-semibold">Vet Visit</div>
+              <div class="text-[#a49bc9] text-xs mt-0.5 leading-relaxed">Checkup, treatment, consultation</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="group flex flex-col items-center gap-3 rounded-xl px-4 py-6 text-center cursor-pointer transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
+            style="background: #1f1633; border: 1px solid #362d59; font-family: Rubik, sans-serif"
+            onmouseover="this.style.borderColor='#c2ef4e'"
+            onmouseout="this.style.borderColor='#362d59'"
+            @click="selectType('vaccination')"
+          >
+            <span
+              class="w-11 h-11 rounded-xl grid place-items-center"
+              style="background: color-mix(in oklch, #c2ef4e 10%, transparent); border: 1px solid color-mix(in oklch, #c2ef4e 30%, transparent); color: #c2ef4e"
+            >
+              <UIcon name="i-heroicons-beaker" class="w-5 h-5" />
+            </span>
+            <div>
+              <div class="text-white text-sm font-semibold">Vaccination</div>
+              <div class="text-[#a49bc9] text-xs mt-0.5 leading-relaxed">Vaccine, booster, schedule</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Step 2: Form -->
+        <div v-else-if="addStep === 'form'">
+          <HealthVetVisitForm
+            v-if="selectedType === 'vet_visit'"
+            :loading="isSaving"
+            @submit="onHealthFormSubmit"
+          />
+          <HealthVaccinationForm
+            v-else-if="selectedType === 'vaccination'"
+            :loading="isSaving"
+            @submit="onHealthFormSubmit"
+          />
+        </div>
+      </template>
+
     </UModal>
 
     <!-- Delete confirmation modal -->
