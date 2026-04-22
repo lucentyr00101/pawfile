@@ -216,7 +216,7 @@ onBeforeUnmount(() => {
 })
 
 // Health records
-const { data: allHealthRecords, status: healthStatus, refresh: refreshHealth } = useFetch<HealthRecord[]>(
+const { data: allHealthRecords, status: healthStatus } = useFetch<HealthRecord[]>(
   `/api/pets/${id}/health-records`,
   { lazy: true },
 )
@@ -230,50 +230,14 @@ const healthRecords = computed(() => {
 
 // Add Record modal
 const isAddOpen = ref(false)
-const addStep = ref<'type' | 'form'>('type')
-const selectedType = ref<'vet_visit' | 'vaccination' | null>(null)
-const isSaving = ref(false)
-
-const addModalTitle = computed(() => {
-  if (addStep.value === 'type') return 'Add Health Record'
-  return selectedType.value === 'vet_visit' ? 'New Vet Visit' : 'New Vaccination'
-})
 
 function openAddRecord() {
-  addStep.value = 'type'
-  selectedType.value = null
   isAddOpen.value = true
 }
 
 function selectType(type: 'vet_visit' | 'vaccination') {
-  selectedType.value = type
-  addStep.value = 'form'
-}
-
-interface HealthFormData {
-  type: 'vet_visit' | 'vaccination'
-  title: string
-  date: string
-  notes?: string
-  metadata?: Record<string, string | undefined>
-}
-
-async function onHealthFormSubmit(data: HealthFormData) {
-  isSaving.value = true
-  try {
-    await $fetch(`/api/pets/${id}/health-records`, { method: 'POST', body: data })
-    await refreshHealth()
-    toast.add({ title: 'Record added', description: 'Health record has been saved.', color: 'success' })
-    isAddOpen.value = false
-  }
-  catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string, message?: string } }
-    const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
-    toast.add({ title: 'Failed to save', description: message, color: 'error' })
-  }
-  finally {
-    isSaving.value = false
-  }
+  isAddOpen.value = false
+  navigateTo(`/pets/${id}/health-records/new?type=${type}`)
 }
 
 async function confirmDelete() {
@@ -826,10 +790,9 @@ function capitalize(str: string) {
     </UModal>
 
     <!-- Add Health Record modal -->
-    <UModal v-model:open="isAddOpen" :title="addModalTitle" :dismissible="!isSaving">
+    <UModal v-model:open="isAddOpen" title="Add Health Record">
       <template #body>
-        <!-- Step 1: Type selection -->
-        <div v-if="addStep === 'type'" class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-3">
           <button
             type="button"
             class="group flex flex-col items-center gap-3 rounded-xl px-4 py-6 text-center cursor-pointer transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
@@ -846,7 +809,7 @@ function capitalize(str: string) {
             </span>
             <div>
               <div class="text-white text-sm font-semibold">Vet Visit</div>
-              <div class="text-[#a49bc9] text-xs mt-0.5 leading-relaxed">Checkup, treatment, consultation</div>
+              <div class="text-[#a49bc9] text-xs mt-0.5 leading-relaxed">Log a clinic visit, checkup, or treatment</div>
             </div>
           </button>
 
@@ -866,26 +829,11 @@ function capitalize(str: string) {
             </span>
             <div>
               <div class="text-white text-sm font-semibold">Vaccination</div>
-              <div class="text-[#a49bc9] text-xs mt-0.5 leading-relaxed">Vaccine, booster, schedule</div>
+              <div class="text-[#a49bc9] text-xs mt-0.5 leading-relaxed">Record a vaccine with due date tracking</div>
             </div>
           </button>
         </div>
-
-        <!-- Step 2: Form -->
-        <div v-else-if="addStep === 'form'">
-          <HealthVetVisitForm
-            v-if="selectedType === 'vet_visit'"
-            :loading="isSaving"
-            @submit="onHealthFormSubmit"
-          />
-          <HealthVaccinationForm
-            v-else-if="selectedType === 'vaccination'"
-            :loading="isSaving"
-            @submit="onHealthFormSubmit"
-          />
-        </div>
       </template>
-
     </UModal>
 
     <!-- Delete confirmation modal -->
