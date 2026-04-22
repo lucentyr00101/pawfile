@@ -56,6 +56,18 @@ export async function updateRecord(userId: string, recordId: string, data: Updat
   return record
 }
 
+export async function addAttachment(userId: string, petId: string, recordId: string, fileUrl: string) {
+  const record = await HealthRecord.findOneAndUpdate(
+    { _id: recordId, userId, petId },
+    { $push: { attachments: fileUrl } },
+    { new: true },
+  )
+  if (!record) {
+    throw createError({ statusCode: 404, statusMessage: 'Health record not found' })
+  }
+  return record
+}
+
 export async function deleteRecord(userId: string, recordId: string) {
   const record = await HealthRecord.findOneAndDelete({ _id: recordId, userId })
   if (!record) {
