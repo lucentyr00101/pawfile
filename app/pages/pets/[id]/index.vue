@@ -66,7 +66,9 @@ const petAge = computed(() => {
 })
 
 type TabId = 'overview' | 'health' | 'timeline' | 'meds' | 'documents'
-const tab = ref<TabId>('overview')
+const validTabs: TabId[] = ['overview', 'health', 'timeline', 'meds', 'documents']
+const queryTab = route.query.tab as TabId
+const tab = ref<TabId>(validTabs.includes(queryTab) ? queryTab : 'overview')
 
 const tabs: { id: TabId, label: string, icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
