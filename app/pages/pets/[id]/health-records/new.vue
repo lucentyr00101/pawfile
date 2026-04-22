@@ -25,7 +25,7 @@ const type = computed(() => {
 })
 
 if (!type.value) {
-  await navigateTo(`/pets/${id}`)
+  await navigateTo(`/pets/${id}?tab=health`)
 }
 
 const { data: pet } = useFetch<Pet>(`/api/pets/${id}`, { lazy: true })
@@ -45,7 +45,7 @@ async function onSubmit(data: HealthFormData) {
   try {
     await $fetch(`/api/pets/${id}/health-records`, { method: 'POST', body: data })
     toast.add({ title: 'Record added', description: 'Health record has been saved.', color: 'success' })
-    await navigateTo(`/pets/${id}`)
+    await navigateTo(`/pets/${id}?tab=health`)
   }
   catch (err: unknown) {
     const e = err as { data?: { statusMessage?: string, message?: string } }
@@ -63,7 +63,7 @@ async function onSubmit(data: HealthFormData) {
 
     <!-- Breadcrumb -->
     <NuxtLink
-      :to="`/pets/${id}`"
+      :to="`/pets/${id}?tab=health`"
       class="inline-flex items-center gap-1.5 text-[13px] text-[#a49bc9] hover:text-white transition-colors w-fit"
       style="font-family: Rubik, sans-serif"
     >
