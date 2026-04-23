@@ -111,20 +111,20 @@ const formattedNextDue = computed(() => {
         <template v-if="isVetVisit && vetMeta">
           <div
             v-if="vetMeta.clinicName || vetMeta.diagnosis"
-            class="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5"
+            class="mt-1.5 flex flex-col gap-1"
           >
             <span
               v-if="vetMeta.clinicName"
-              class="text-[#a49bc9] text-[12px] flex items-center gap-1"
+              class="text-[#a49bc9] text-[12px] flex items-center gap-1 truncate"
             >
               <UIcon name="i-heroicons-building-office-2" class="w-3 h-3 shrink-0" />
               {{ vetMeta.clinicName }}
             </span>
             <span
               v-if="vetMeta.diagnosis"
-              class="text-[#e5e7eb] text-[12px] flex items-center gap-1"
+              class="text-[#e5e7eb] text-[12px] flex items-start gap-1 line-clamp-2 whitespace-pre-line"
             >
-              <UIcon name="i-heroicons-document-text" class="w-3 h-3 shrink-0" />
+              <UIcon name="i-heroicons-document-text" class="w-3 h-3 shrink-0 mt-0.5" />
               {{ vetMeta.diagnosis }}
             </span>
           </div>
@@ -132,10 +132,10 @@ const formattedNextDue = computed(() => {
 
         <!-- Vaccination metadata -->
         <template v-if="!isVetVisit && vacMeta">
-          <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div class="mt-1.5 flex flex-col gap-1">
             <span
               v-if="vacMeta.vaccineName"
-              class="text-[#a49bc9] text-[12px] flex items-center gap-1"
+              class="text-[#a49bc9] text-[12px] flex items-center gap-1 truncate"
             >
               <UIcon name="i-heroicons-tag" class="w-3 h-3 shrink-0" />
               {{ vacMeta.vaccineName }}
@@ -143,7 +143,7 @@ const formattedNextDue = computed(() => {
             <template v-if="formattedNextDue">
               <span
                 v-if="nextDueStatus === 'overdue'"
-                class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
+                class="self-start inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
                 style="
                   color: #ef4444;
                   background: color-mix(in oklch, #ef4444 12%, transparent);
@@ -156,7 +156,7 @@ const formattedNextDue = computed(() => {
               </span>
               <span
                 v-else-if="nextDueStatus === 'due-soon'"
-                class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
+                class="self-start inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
                 style="
                   color: #f59e0b;
                   background: color-mix(in oklch, #f59e0b 12%, transparent);
@@ -181,7 +181,7 @@ const formattedNextDue = computed(() => {
         <!-- Notes preview -->
         <p
           v-if="record.notes"
-          class="mt-1.5 text-[#a49bc9] text-[12px] leading-relaxed line-clamp-2"
+          class="mt-1.5 text-[#a49bc9] text-[12px] leading-relaxed line-clamp-3 whitespace-pre-line"
         >
           {{ record.notes }}
         </p>
