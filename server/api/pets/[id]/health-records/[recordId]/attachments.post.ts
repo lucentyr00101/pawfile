@@ -19,14 +19,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const petId = getRouterParam(event, 'petId')
-  const id = getRouterParam(event, 'id')
+  const petId = getRouterParam(event, 'id')
+  const recordId = getRouterParam(event, 'recordId')
 
   if (!petId || !mongoose.isValidObjectId(petId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
   }
 
-  if (!id || !mongoose.isValidObjectId(id)) {
+  if (!recordId || !mongoose.isValidObjectId(recordId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid health record ID' })
   }
 
@@ -51,8 +51,8 @@ export default defineEventHandler(async (event) => {
 
   const ext = MIME_TO_EXT[contentType]
   const uuid = crypto.randomUUID()
-  const filename = `health-records/${session.user.id}/${id}/${uuid}.${ext}`
+  const filename = `health-records/${session.user.id}/${recordId}/${uuid}.${ext}`
   const fileUrl = await uploadFile(filePart.data, filename, contentType)
 
-  return addAttachment(session.user.id, petId, id, fileUrl)
+  return addAttachment(session.user.id, petId, recordId, fileUrl)
 })

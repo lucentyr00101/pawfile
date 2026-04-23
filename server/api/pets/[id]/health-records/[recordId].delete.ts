@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { getRecordById } from '~~/server/services/health-record.service'
+import { deleteRecord } from '~~/server/services/health-record.service'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -8,18 +8,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const petId = getRouterParam(event, 'petId')
-  const id = getRouterParam(event, 'id')
+  const petId = getRouterParam(event, 'id')
+  const recordId = getRouterParam(event, 'recordId')
 
   if (!petId || !mongoose.isValidObjectId(petId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
   }
 
-  if (!id || !mongoose.isValidObjectId(id)) {
+  if (!recordId || !mongoose.isValidObjectId(recordId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid health record ID' })
   }
 
   await connectDB()
 
-  return getRecordById(session.user.id, id)
+  await deleteRecord(session.user.id, recordId)
+
+  return { message: 'Health record deleted successfully' }
 })

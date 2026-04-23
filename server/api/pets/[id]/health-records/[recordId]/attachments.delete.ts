@@ -8,14 +8,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const petId = getRouterParam(event, 'petId')
-  const id = getRouterParam(event, 'id')
+  const petId = getRouterParam(event, 'id')
+  const recordId = getRouterParam(event, 'recordId')
 
   if (!petId || !mongoose.isValidObjectId(petId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
   }
 
-  if (!id || !mongoose.isValidObjectId(id)) {
+  if (!recordId || !mongoose.isValidObjectId(recordId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid health record ID' })
   }
 
@@ -28,5 +28,5 @@ export default defineEventHandler(async (event) => {
 
   await connectDB()
 
-  return removeAttachment(session.user.id, petId, id, url)
+  return removeAttachment(session.user.id, petId, recordId, url)
 })

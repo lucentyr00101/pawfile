@@ -13,14 +13,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const petId = getRouterParam(event, 'petId')
-  const id = getRouterParam(event, 'id')
+  const petId = getRouterParam(event, 'id')
+  const recordId = getRouterParam(event, 'recordId')
 
   if (!petId || !mongoose.isValidObjectId(petId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
   }
 
-  if (!id || !mongoose.isValidObjectId(id)) {
+  if (!recordId || !mongoose.isValidObjectId(recordId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid health record ID' })
   }
 
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
 
   await connectDB()
 
-  const existing = await getRecordById(session.user.id, id)
+  const existing = await getRecordById(session.user.id, recordId)
 
   if (existing.type === 'vaccination' && metadata?.nextDueDate !== undefined) {
     const nextDueDate = new Date(metadata.nextDueDate)
@@ -75,5 +75,5 @@ export default defineEventHandler(async (event) => {
   if (notes !== undefined) input.notes = notes
   if (metadata !== undefined) input.metadata = metadata as HealthRecordMetadata
 
-  return updateRecord(session.user.id, id, input)
+  return updateRecord(session.user.id, recordId, input)
 })

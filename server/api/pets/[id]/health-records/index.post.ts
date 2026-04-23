@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  const petId = getRouterParam(event, 'petId')
+  const petId = getRouterParam(event, 'id')
 
   if (!petId || !mongoose.isValidObjectId(petId)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
