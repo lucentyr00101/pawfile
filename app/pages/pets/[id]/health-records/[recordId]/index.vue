@@ -247,9 +247,10 @@ async function confirmDelete() {
             variant="ghost"
             icon="i-heroicons-trash"
             size="sm"
-            aria-label="Delete record"
             @click="isDeleteOpen = true"
-          />
+          >
+            Delete
+          </UButton>
         </div>
       </div>
 
@@ -492,7 +493,7 @@ async function confirmDelete() {
     </template>
 
     <!-- Delete confirmation modal -->
-    <UModal v-model:open="isDeleteOpen" title="Delete Health Record" :dismissible="!isDeleting">
+    <UModal v-model:open="isDeleteOpen" :title="`Delete '${record?.title}'?`" :dismissible="!isDeleting">
       <template #body>
         <p class="text-[#e5e7eb] text-sm" style="font-family: Rubik, sans-serif">
           Are you sure you want to delete
