@@ -672,6 +672,7 @@ function capitalize(str: string) {
             v-for="record in healthRecords"
             :key="record._id"
             :record="record"
+            @click="navigateTo(`/pets/${id}/health-records/${record._id}`)"
           />
         </div>
       </PanelCard>
