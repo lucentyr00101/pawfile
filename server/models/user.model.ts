@@ -1,4 +1,5 @@
 import mongoose, { Schema, type Document } from 'mongoose'
+import { USER_PLANS, type UserPlan } from '#shared/utils/pet'
 
 export interface IUser extends Document {
   email: string
@@ -7,6 +8,7 @@ export interface IUser extends Document {
   provider: string
   providerId?: string
   avatar?: string
+  plan: UserPlan
   createdAt: Date
 }
 
@@ -37,6 +39,11 @@ const UserSchema = new Schema<IUser>(
     },
     avatar: {
       type: String,
+    },
+    plan: {
+      type: String,
+      enum: [...USER_PLANS],
+      default: 'free',
     },
     createdAt: {
       type: Date,

@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
     name: user.name,
     avatar: user.avatar ?? null,
     provider: user.provider,
+    plan: user.plan ?? 'free',
     createdAt: user.createdAt,
   }
 })

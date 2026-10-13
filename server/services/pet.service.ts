@@ -1,7 +1,8 @@
 import { Pet } from '~~/server/models/pet.model'
 import { HealthRecord } from '~~/server/models/health-record.model'
+import { User } from '~~/server/models/user.model'
 import { deleteFile } from '~~/server/utils/storage'
-import type { PetGender, PetSpecies } from '#shared/utils/pet'
+import { FREE_PET_LIMIT, type PetGender, type PetSpecies } from '#shared/utils/pet'
 
 export interface CreatePetInput {
   name: string
@@ -23,6 +24,16 @@ export type UpdatePetInput = Partial<Pick<CreatePetInput, RequiredPetFields>> & 
 }
 
 export async function createPet(userId: string, data: CreatePetInput) {
+  const user = await User.findById(userId).select('plan')
+  if (user?.plan !== 'premium') {
+    const count = await Pet.countDocuments({ userId })
+    if (count >= FREE_PET_LIMIT) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: `The free plan includes up to ${FREE_PET_LIMIT} pets. Upgrade to premium to add more.`,
+      })
+    }
+  }
   return Pet.create({ userId, ...data })
 }
 
