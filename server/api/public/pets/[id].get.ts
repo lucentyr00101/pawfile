@@ -1,12 +1,8 @@
-import mongoose from 'mongoose'
 import { getPublicPetById } from '~~/server/services/pet.service'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id')
-
-  if (!id || !mongoose.isValidObjectId(id)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
-  }
+  const id = requireObjectIdParam(event, 'id', 'pet')
 
   await connectDB()
 

@@ -2,11 +2,7 @@ import { createPet, type CreatePetInput } from '~~/server/services/pet.service'
 import { PET_GENDERS, PET_SPECIES } from '#shared/utils/pet'
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
-
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  const { user } = await requireUserSession(event)
 
   const body = await readBody(event)
   const { name, species, breed, birthday, gender, weight, notes, isPublic } = body ?? {}
@@ -49,7 +45,7 @@ export default defineEventHandler(async (event) => {
   if (weight !== undefined) input.weight = weight
   if (birthday !== undefined) input.birthday = new Date(birthday)
 
-  const pet = await createPet(session.user.id, input)
+  const pet = await createPet(user.id, input)
 
   setResponseStatus(event, 201)
   return pet

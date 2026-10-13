@@ -1,15 +1,11 @@
 import { getPetsByUser } from '~~/server/services/pet.service'
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
-
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  const { user } = await requireUserSession(event)
 
   await connectDB()
 
-  const pets = await getPetsByUser(session.user.id)
+  const pets = await getPetsByUser(user.id)
 
   return pets
 })

@@ -1,25 +1,13 @@
-import mongoose from 'mongoose'
 import { getRecordById } from '~~/server/services/health-record.service'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const petId = getRouterParam(event, 'id')
-  const recordId = getRouterParam(event, 'recordId')
-
-  if (!petId || !mongoose.isValidObjectId(petId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
-  }
-
-  if (!recordId || !mongoose.isValidObjectId(recordId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid health record ID' })
-  }
+  const petId = requireObjectIdParam(event, 'id', 'pet')
+  const recordId = requireObjectIdParam(event, 'recordId', 'health record')
 
   await connectDB()
 
-  return getRecordById(session.user.id, recordId)
+  return getRecordById(user.id, petId, recordId)
 })

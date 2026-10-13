@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
-    "@types/mongoose": "^5.11.97"
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^22"
   }
 }

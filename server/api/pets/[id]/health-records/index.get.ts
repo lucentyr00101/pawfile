@@ -1,21 +1,13 @@
-import mongoose from 'mongoose'
 import type { HealthRecordType } from '~~/server/models/health-record.model'
 import { getRecordsByPet, type GetRecordsFilters } from '~~/server/services/health-record.service'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 const ALLOWED_TYPES = ['vet_visit', 'vaccination'] as const satisfies readonly HealthRecordType[]
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const petId = getRouterParam(event, 'id')
-
-  if (!petId || !mongoose.isValidObjectId(petId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
-  }
+  const petId = requireObjectIdParam(event, 'id', 'pet')
 
   const { type } = getQuery(event)
 
@@ -32,5 +24,5 @@ export default defineEventHandler(async (event) => {
 
   await connectDB()
 
-  return getRecordsByPet(session.user.id, petId, filters)
+  return getRecordsByPet(user.id, petId, filters)
 })

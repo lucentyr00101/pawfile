@@ -41,16 +41,27 @@ export async function getRecordsByPet(
   return HealthRecord.find(query).sort({ date: -1 })
 }
 
-export async function getRecordById(userId: string, recordId: string) {
-  const record = await HealthRecord.findOne({ _id: recordId, userId })
+export async function getRecordsByUser(userId: string) {
+  return HealthRecord.find({ userId })
+    .select('petId type title date metadata createdAt')
+    .sort({ date: -1 })
+}
+
+export async function getRecordById(userId: string, petId: string, recordId: string) {
+  const record = await HealthRecord.findOne({ _id: recordId, userId, petId })
   if (!record) {
     throw createError({ statusCode: 404, statusMessage: 'Health record not found' })
   }
   return record
 }
 
-export async function updateRecord(userId: string, recordId: string, data: UpdateRecordInput) {
-  const record = await HealthRecord.findOneAndUpdate({ _id: recordId, userId }, data, {
+export async function updateRecord(
+  userId: string,
+  petId: string,
+  recordId: string,
+  data: UpdateRecordInput,
+) {
+  const record = await HealthRecord.findOneAndUpdate({ _id: recordId, userId, petId }, data, {
     new: true,
     runValidators: true,
   })
@@ -93,8 +104,8 @@ export async function removeAttachment(userId: string, petId: string, recordId: 
   return updated
 }
 
-export async function deleteRecord(userId: string, recordId: string) {
-  const record = await HealthRecord.findOneAndDelete({ _id: recordId, userId })
+export async function deleteRecord(userId: string, petId: string, recordId: string) {
+  const record = await HealthRecord.findOneAndDelete({ _id: recordId, userId, petId })
   if (!record) {
     throw createError({ statusCode: 404, statusMessage: 'Health record not found' })
   }

@@ -1,22 +1,14 @@
-import mongoose from 'mongoose'
 import { getPetById } from '~~/server/services/pet.service'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const id = getRouterParam(event, 'id')
-
-  if (!id || !mongoose.isValidObjectId(id)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
-  }
+  const id = requireObjectIdParam(event, 'id', 'pet')
 
   await connectDB()
 
-  const pet = await getPetById(id, session.user.id)
+  const pet = await getPetById(id, user.id)
 
   return pet
 })

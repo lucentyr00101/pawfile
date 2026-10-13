@@ -1,21 +1,14 @@
 import { deletePet } from '~~/server/services/pet.service'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const id = getRouterParam(event, 'id')
-
-  if (!id) {
-    throw createError({ statusCode: 400, statusMessage: 'Pet ID is required' })
-  }
+  const id = requireObjectIdParam(event, 'id', 'pet')
 
   await connectDB()
 
-  await deletePet(id, session.user.id)
+  await deletePet(id, user.id)
 
   return { message: 'Pet deleted successfully' }
 })

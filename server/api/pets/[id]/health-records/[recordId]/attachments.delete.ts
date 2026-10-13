@@ -1,23 +1,11 @@
-import mongoose from 'mongoose'
 import { removeAttachment } from '~~/server/services/health-record.service'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const petId = getRouterParam(event, 'id')
-  const recordId = getRouterParam(event, 'recordId')
-
-  if (!petId || !mongoose.isValidObjectId(petId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
-  }
-
-  if (!recordId || !mongoose.isValidObjectId(recordId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid health record ID' })
-  }
+  const petId = requireObjectIdParam(event, 'id', 'pet')
+  const recordId = requireObjectIdParam(event, 'recordId', 'health record')
 
   const body = await readBody(event)
   const url = body?.url
@@ -28,5 +16,5 @@ export default defineEventHandler(async (event) => {
 
   await connectDB()
 
-  return removeAttachment(session.user.id, petId, recordId, url)
+  return removeAttachment(user.id, petId, recordId, url)
 })

@@ -1,6 +1,7 @@
-import mongoose from 'mongoose'
 import { addAttachment } from '~~/server/services/health-record.service'
 import { uploadFile } from '~~/server/utils/storage'
+import { requireObjectIdParam } from '~~/server/utils/params'
+import { assertUploadSize } from '~~/server/utils/upload'
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -13,22 +14,12 @@ const MIME_TO_EXT: Record<string, string> = {
 }
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  const petId = requireObjectIdParam(event, 'id', 'pet')
+  const recordId = requireObjectIdParam(event, 'recordId', 'health record')
 
-  const petId = getRouterParam(event, 'id')
-  const recordId = getRouterParam(event, 'recordId')
-
-  if (!petId || !mongoose.isValidObjectId(petId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
-  }
-
-  if (!recordId || !mongoose.isValidObjectId(recordId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid health record ID' })
-  }
+  assertUploadSize(event, MAX_FILE_SIZE, 'file')
 
   const parts = await readMultipartFormData(event)
   const filePart = parts?.find((p) => p.name === 'file')
@@ -51,8 +42,8 @@ export default defineEventHandler(async (event) => {
 
   const ext = MIME_TO_EXT[contentType]
   const uuid = crypto.randomUUID()
-  const filename = `health-records/${session.user.id}/${recordId}/${uuid}.${ext}`
+  const filename = `health-records/${user.id}/${recordId}/${uuid}.${ext}`
   const fileUrl = await uploadFile(filePart.data, filename, contentType)
 
-  return addAttachment(session.user.id, petId, recordId, fileUrl)
+  return addAttachment(user.id, petId, recordId, fileUrl)
 })

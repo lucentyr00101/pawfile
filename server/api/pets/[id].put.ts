@@ -1,14 +1,11 @@
 import { updatePet, type UpdatePetInput } from '~~/server/services/pet.service'
 import { PET_GENDERS, PET_SPECIES } from '#shared/utils/pet'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const id = getRouterParam(event, 'id')
+  const id = requireObjectIdParam(event, 'id', 'pet')
 
   const body = await readBody(event)
   const { name, species, breed, birthday, gender, weight, notes, isPublic } = body ?? {}
@@ -62,7 +59,7 @@ export default defineEventHandler(async (event) => {
   if (weight !== undefined) input.weight = weight
   if (birthday !== undefined) input.birthday = birthday ? new Date(birthday) : null
 
-  const pet = await updatePet(id!, session.user.id, input)
+  const pet = await updatePet(id, user.id, input)
 
   return pet
 })

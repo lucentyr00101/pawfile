@@ -1,22 +1,14 @@
-import mongoose from 'mongoose'
 import type { HealthRecordType } from '~~/server/models/health-record.model'
 import { createRecord, type CreateRecordInput } from '~~/server/services/health-record.service'
 import { parseHealthRecordMetadata, parseHealthRecordNotes } from '~~/server/utils/health-record'
+import { requireObjectIdParam } from '~~/server/utils/params'
 
 const ALLOWED_TYPES = ['vet_visit', 'vaccination'] as const satisfies readonly HealthRecordType[]
 
 export default defineEventHandler(async (event) => {
-  const session = await getUserSession(event)
+  const { user } = await requireUserSession(event)
 
-  if (!session?.user) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  const petId = getRouterParam(event, 'id')
-
-  if (!petId || !mongoose.isValidObjectId(petId)) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid pet ID' })
-  }
+  const petId = requireObjectIdParam(event, 'id', 'pet')
 
   const body = await readBody(event)
   const { type, title, date, notes, metadata } = body ?? {}
@@ -61,7 +53,7 @@ export default defineEventHandler(async (event) => {
   if (parsedNotes) input.notes = parsedNotes
   if (parsedMetadata) input.metadata = parsedMetadata
 
-  const record = await createRecord(session.user.id, petId, input)
+  const record = await createRecord(user.id, petId, input)
 
   setResponseStatus(event, 201)
   return record
