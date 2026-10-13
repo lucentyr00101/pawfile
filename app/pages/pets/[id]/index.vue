@@ -845,6 +845,7 @@ function capitalize(str: string) {
         <p class="text-[#e5e7eb] text-sm" style="font-family: Rubik, sans-serif">
           Are you sure you want to delete
           <strong class="text-white">{{ pet?.name }}</strong>?
+          All of their health records and attachments will be deleted too.
           This can't be undone.
         </p>
       </template>

@@ -1,5 +1,4 @@
 import { deletePet } from '~~/server/services/pet.service'
-import { deleteFile } from '~~/server/utils/storage'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -16,11 +15,7 @@ export default defineEventHandler(async (event) => {
 
   await connectDB()
 
-  const pet = await deletePet(id, session.user.id)
-
-  if (pet.photo) {
-    await deleteFile(pet.photo)
-  }
+  await deletePet(id, session.user.id)
 
   return { message: 'Pet deleted successfully' }
 })
