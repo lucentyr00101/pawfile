@@ -34,6 +34,8 @@ function validate(data: typeof state): FormError[] {
     errors.push({ name: 'password', message: 'Password is required' })
   } else if (data.password.length < 8) {
     errors.push({ name: 'password', message: 'Password must be at least 8 characters' })
+  } else if (new TextEncoder().encode(data.password).length > 72) {
+    errors.push({ name: 'password', message: 'Password must be at most 72 characters' })
   }
 
   if (!data.confirmPassword) {
@@ -76,14 +78,14 @@ async function onSubmit(event: FormSubmitEvent<typeof state>) {
   }
 }
 
-const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
+const formFieldUi = { label: 'text-gray-200 text-sm font-medium mb-1.5' }
 </script>
 
 <template>
   <div>
     <div class="text-center mb-8">
       <h1 class="text-2xl font-semibold text-white">Create your account</h1>
-      <p class="text-[#e5e7eb] text-sm mt-1">Track your pet's health in one place</p>
+      <p class="text-gray-200 text-sm mt-1">Track your pet's health in one place</p>
     </div>
 
       <!-- Card -->
@@ -97,10 +99,7 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
           <!-- Google -->
           <a
             href="/auth/google"
-            class="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-border-dark text-white text-sm font-medium transition-colors duration-150 cursor-pointer"
-            style="background: rgba(255,255,255,0.06); font-family: Rubik, sans-serif"
-            onmouseover="this.style.background='rgba(255,255,255,0.11)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.06)'"
+            class="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-border-dark text-white text-sm font-medium bg-white/6 hover:bg-white/11 transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-sentry-500"
           >
             <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -114,10 +113,7 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
           <!-- GitHub -->
           <a
             href="/auth/github"
-            class="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-border-dark text-white text-sm font-medium transition-colors duration-150 cursor-pointer"
-            style="background: rgba(255,255,255,0.06); font-family: Rubik, sans-serif"
-            onmouseover="this.style.background='rgba(255,255,255,0.11)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.06)'"
+            class="flex items-center justify-center gap-3 w-full h-11 rounded-xl border border-border-dark text-white text-sm font-medium bg-white/6 hover:bg-white/11 transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-sentry-500"
           >
             <svg viewBox="0 0 24 24" fill="white" class="w-5 h-5 shrink-0" aria-hidden="true">
               <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
@@ -133,8 +129,8 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
           </div>
           <div class="relative flex justify-center">
             <span
-              class="bg-dusk-950 px-3 text-[#e5e7eb] text-xs uppercase"
-              style="letter-spacing: 0.2px; font-family: Rubik, sans-serif"
+              class="bg-dusk-950 px-3 text-gray-200 text-xs uppercase"
+              style="letter-spacing: 0.2px;"
             >
               or register with email
             </span>
@@ -174,7 +170,7 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
             name="password"
             required
             hint="Minimum 8 characters"
-            :ui="{ ...formFieldUi, hint: 'text-[#a49bc9] text-xs' }"
+            :ui="{ ...formFieldUi, hint: 'text-dusk-300 text-xs' }"
           >
             <UInput
               v-model="state.password"
@@ -187,9 +183,9 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
               <template #trailing>
                 <button
                   type="button"
-                  class="text-[#a49bc9] hover:text-white transition-colors duration-150 cursor-pointer"
+                  class="text-dusk-300 hover:text-white transition-colors duration-150 cursor-pointer"
                   :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                  @click="showPassword = !showPassword"
+                  @click="() => { showPassword = !showPassword }"
                 >
                   <!-- Eye icon -->
                   <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="w-4.5 h-4.5">
@@ -217,9 +213,9 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
               <template #trailing>
                 <button
                   type="button"
-                  class="text-[#a49bc9] hover:text-white transition-colors duration-150 cursor-pointer"
+                  class="text-dusk-300 hover:text-white transition-colors duration-150 cursor-pointer"
                   :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
-                  @click="showConfirmPassword = !showConfirmPassword"
+                  @click="() => { showConfirmPassword = !showConfirmPassword }"
                 >
                   <svg v-if="!showConfirmPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="w-4.5 h-4.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
@@ -235,27 +231,14 @@ const formFieldUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
 
           <!-- Submit -->
           <div class="pt-2">
-            <button
-              type="submit"
-              :disabled="loading"
-              class="w-full h-11 rounded-[13px] text-white text-sm font-bold uppercase tracking-wider transition-shadow duration-150 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-              style="background-color: #79628c; border: 1px solid #584674; box-shadow: rgba(0,0,0,0.1) 0px 1px 3px 0px inset; font-family: Rubik, sans-serif; letter-spacing: 0.2px"
-              onmouseover="if (!this.disabled) this.style.boxShadow='rgba(0,0,0,0.18) 0px 0.5rem 1.5rem, rgba(0,0,0,0.1) 0px 1px 3px 0px inset'"
-              onmouseout="this.style.boxShadow='rgba(0,0,0,0.1) 0px 1px 3px 0px inset'"
-            >
-              <svg v-if="loading" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              {{ loading ? 'Creating Account…' : 'Create Account' }}
-            </button>
+            <SubmitButton :loading="loading" label="Create Account" loading-label="Creating Account…" />
           </div>
 
         </UForm>
       </div>
 
       <!-- Sign in link -->
-      <p class="text-center mt-6 text-sm text-[#e5e7eb]" style="font-family: Rubik, sans-serif">
+      <p class="text-center mt-6 text-sm text-gray-200">
         Already have an account?
         <NuxtLink
           to="/login"

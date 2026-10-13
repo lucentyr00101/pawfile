@@ -1,36 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-
-interface Pet {
-  _id: string
-  name: string
-}
-
-interface VetVisitMetadata {
-  clinicName?: string
-  vetName?: string
-  diagnosis?: string
-  followUpDate?: string
-}
-
-interface VaccinationMetadata {
-  vaccineName?: string
-  batchNumber?: string
-  nextDueDate?: string
-}
-
-interface HealthRecord {
-  _id: string
-  petId: string
-  type: 'vet_visit' | 'vaccination'
-  title: string
-  date: string
-  notes?: string
-  metadata?: VetVisitMetadata | VaccinationMetadata
-  attachments?: string[]
-  createdAt: string
-  updatedAt: string
-}
+import type { HealthRecord, Pet } from '#shared/types/models'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -45,61 +14,20 @@ const {
   error,
 } = useFetch<HealthRecord>(`/api/pets/${id}/health-records/${recordId}`, { lazy: true })
 
+// Sibling records decide whether this record's due date was superseded by a later dose/visit
+const { data: petRecords } = useFetch<HealthRecord[]>(`/api/pets/${id}/health-records`, { lazy: true })
+
 const isLoading = computed(() => status.value === 'pending')
 const is404 = computed(() => error.value?.statusCode === 404)
 
 const isVetVisit = computed(() => record.value?.type === 'vet_visit')
-const vetMeta = computed(() =>
-  isVetVisit.value ? (record.value?.metadata as VetVisitMetadata) : null,
+const meta = computed(() => record.value?.metadata ?? {})
+
+const rawDueDate = computed(() => isVetVisit.value ? meta.value.followUpDate : meta.value.nextDueDate)
+const activeDue = computed(() =>
+  petRecords.value ? getDueItems(petRecords.value).find(item => item.record._id === recordId) : undefined,
 )
-const vacMeta = computed(() =>
-  !isVetVisit.value ? (record.value?.metadata as VaccinationMetadata) : null,
-)
-
-const formattedDate = computed(() => {
-  if (!record.value?.date) return ''
-  return new Date(record.value.date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-})
-
-const followUpStatus = computed(() => {
-  const raw = vetMeta.value?.followUpDate
-  if (!raw) return null
-  const diff = (new Date(raw).getTime() - Date.now()) / 86_400_000
-  return diff < 0 ? 'overdue' : null
-})
-
-const formattedFollowUp = computed(() => {
-  const raw = vetMeta.value?.followUpDate
-  if (!raw) return null
-  return new Date(raw).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-})
-
-const nextDueStatus = computed(() => {
-  const raw = vacMeta.value?.nextDueDate
-  if (!raw) return null
-  const diff = (new Date(raw).getTime() - Date.now()) / 86_400_000
-  if (diff < 0) return 'overdue' as const
-  if (diff <= 7) return 'due-soon' as const
-  return 'ok' as const
-})
-
-const formattedNextDue = computed(() => {
-  const raw = vacMeta.value?.nextDueDate
-  if (!raw) return null
-  return new Date(raw).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-})
+const isSuperseded = computed(() => !!rawDueDate.value && !!petRecords.value && !activeDue.value)
 
 function isImage(url: string) {
   return /\.(jpe?g|png|webp|gif|avif)$/i.test(url)
@@ -113,6 +41,11 @@ function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function apiErrorMessage(err: unknown) {
+  const e = err as { data?: { statusMessage?: string, message?: string } }
+  return e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
 }
 
 // Delete record
@@ -131,9 +64,7 @@ async function confirmDelete() {
     await navigateTo(`/pets/${id}?tab=health`)
   }
   catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string; message?: string } }
-    const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
-    toast.add({ title: 'Failed to delete', description: message, color: 'error' })
+    toast.add({ title: 'Failed to delete', description: apiErrorMessage(err), color: 'error' })
   }
   finally {
     isDeleting.value = false
@@ -142,6 +73,9 @@ async function confirmDelete() {
 }
 
 // Attachment upload
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref<string | null>(null)
@@ -155,12 +89,21 @@ function openFilePicker() {
 function onFileSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
+  input.value = ''
   if (!file) return
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    toast.add({ title: 'Unsupported file type', description: 'Attachments must be a JPEG, PNG, WebP image, or PDF.', color: 'error' })
+    return
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    toast.add({ title: 'File too large', description: 'Attachments must be 5MB or smaller.', color: 'error' })
+    return
+  }
 
   selectedFile.value = file
   previewUrl.value = file.type.startsWith('image/') ? URL.createObjectURL(file) : null
   isUploadPreviewOpen.value = true
-  input.value = ''
 }
 
 function cancelUpload() {
@@ -191,9 +134,7 @@ async function uploadAttachment() {
     cancelUpload()
   }
   catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string; message?: string } }
-    const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
-    toast.add({ title: 'Upload failed', description: message, color: 'error' })
+    toast.add({ title: 'Upload failed', description: apiErrorMessage(err), color: 'error' })
   }
   finally {
     isUploading.value = false
@@ -231,9 +172,7 @@ async function confirmRemoveAttachment() {
     toast.add({ title: 'Attachment removed', description: 'File removed from the health record.', color: 'success' })
   }
   catch (err: unknown) {
-    const e = err as { data?: { statusMessage?: string; message?: string } }
-    const message = e?.data?.statusMessage ?? e?.data?.message ?? 'Something went wrong.'
-    toast.add({ title: 'Failed to remove', description: message, color: 'error' })
+    toast.add({ title: 'Failed to remove', description: apiErrorMessage(err), color: 'error' })
   }
   finally {
     isRemoving.value = false
@@ -241,11 +180,15 @@ async function confirmRemoveAttachment() {
     attachmentToRemove.value = null
   }
 }
+
+const imageAttachments = computed(() => record.value?.attachments?.filter(isImage) ?? [])
+const fileAttachments = computed(() => record.value?.attachments?.filter(u => !isImage(u)) ?? [])
+
+const panelCls = 'rounded-2xl overflow-hidden bg-dusk-950 border border-border-dark shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)]'
 </script>
 
 <template>
   <div class="max-w-2xl mx-auto w-full px-4 sm:px-6 py-8 flex flex-col gap-5">
-
     <!-- Hidden file input -->
     <input
       ref="fileInputRef"
@@ -258,12 +201,11 @@ async function confirmRemoveAttachment() {
     <!-- Breadcrumb -->
     <NuxtLink
       :to="`/pets/${id}?tab=health`"
-      class="inline-flex items-center gap-1.5 text-[13px] text-[#a49bc9] hover:text-white transition-colors w-fit"
-      style="font-family: Rubik, sans-serif"
+      class="inline-flex items-center gap-1.5 text-[13px] text-dusk-300 hover:text-white transition-colors w-fit"
     >
       <UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5 shrink-0" />
       <span>{{ pet?.name ?? 'Pet' }}</span>
-      <span class="text-[#584674] mx-0.5">/</span>
+      <span class="text-border-button mx-0.5">/</span>
       <span>Health Records</span>
     </NuxtLink>
 
@@ -277,22 +219,13 @@ async function confirmRemoveAttachment() {
     <!-- 404 / error state -->
     <template v-else-if="is404 || (error && !record)">
       <div class="flex flex-col items-center justify-center py-20 text-center">
-        <div
-          class="w-14 h-14 rounded-2xl grid place-items-center mb-5"
-          style="background: #1f1633; border: 1px solid #362d59"
-        >
-          <UIcon name="i-heroicons-document-magnifying-glass" class="w-7 h-7 text-[#6a5fc1]" />
+        <div class="w-14 h-14 rounded-2xl grid place-items-center mb-5 bg-dusk-900 border border-border-dark">
+          <UIcon name="i-heroicons-document-magnifying-glass" class="w-7 h-7 text-sentry-500" />
         </div>
-        <p
-          class="text-white text-xl font-semibold mb-2"
-          style="font-family: Rubik, sans-serif"
-        >
+        <p class="text-white text-xl font-semibold mb-2">
           Record not found
         </p>
-        <p
-          class="text-[#a49bc9] text-sm mb-6"
-          style="font-family: Rubik, sans-serif"
-        >
+        <p class="text-dusk-300 text-sm mb-6">
           This health record doesn't exist or you don't have access.
         </p>
         <UButton :to="`/pets/${id}?tab=health`" color="primary">
@@ -303,62 +236,54 @@ async function confirmRemoveAttachment() {
 
     <!-- Record detail -->
     <template v-else-if="record">
-
       <!-- Hero card -->
-      <div
-        class="rounded-2xl overflow-hidden"
-        style="background: #150f23; border: 1px solid #362d59; box-shadow: rgba(0,0,0,0.1) 0px 10px 15px -3px;"
-      >
-        <!-- Type-colored accent stripe -->
+      <div :class="panelCls">
         <div
           class="h-px w-full"
-          :style="isVetVisit
-            ? 'background: linear-gradient(90deg, transparent 0%, #6a5fc1 25%, #9a8ee8 60%, transparent 100%)'
-            : 'background: linear-gradient(90deg, transparent 0%, #c2ef4e 25%, #a3d422 60%, transparent 100%)'"
+          :class="isVetVisit
+            ? 'bg-linear-to-r from-transparent via-sentry-500 to-transparent'
+            : 'bg-linear-to-r from-transparent via-neon-300 to-transparent'"
         />
 
-        <div class="p-6 flex items-start gap-5">
-          <!-- Type icon -->
+        <div class="p-5 sm:p-6 flex flex-wrap sm:flex-nowrap items-start gap-4 sm:gap-5">
           <div
-            class="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-            :style="isVetVisit
-              ? 'background: color-mix(in oklch, #6a5fc1 15%, transparent); border: 1px solid color-mix(in oklch, #6a5fc1 35%, transparent); box-shadow: 0 0 28px rgba(106,95,193,0.2)'
-              : 'background: color-mix(in oklch, #c2ef4e 10%, transparent); border: 1px solid color-mix(in oklch, #c2ef4e 30%, transparent); box-shadow: 0 0 28px rgba(194,239,78,0.12)'"
+            class="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 border"
+            :class="isVetVisit
+              ? 'bg-sentry-500/15 border-sentry-500/35 shadow-[0_0_28px_rgba(106,95,193,0.2)] text-sentry-300'
+              : 'bg-neon-300/10 border-neon-300/30 shadow-[0_0_28px_rgba(194,239,78,0.12)] text-neon-300'"
           >
             <UIcon
               :name="isVetVisit ? 'i-heroicons-clipboard-document-list' : 'i-heroicons-beaker'"
               class="w-7 h-7"
-              :style="isVetVisit ? 'color: #9a8ee8' : 'color: #c2ef4e'"
+              aria-hidden="true"
             />
           </div>
 
-          <!-- Title + type + date -->
-          <div class="flex-1 min-w-0" style="font-family: Rubik, sans-serif">
+          <div class="flex-1 min-w-0">
             <span
-              class="inline-flex items-center text-[10px] font-bold uppercase px-2 py-0.5 rounded-full mb-2"
-              :style="isVetVisit
-                ? 'color: #9a8ee8; background: color-mix(in oklch, #6a5fc1 15%, transparent); border: 1px solid color-mix(in oklch, #6a5fc1 30%, transparent); letter-spacing: 0.25px'
-                : 'color: #c2ef4e; background: color-mix(in oklch, #c2ef4e 10%, transparent); border: 1px solid color-mix(in oklch, #c2ef4e 30%, transparent); letter-spacing: 0.25px'"
+              class="inline-flex items-center text-[10px] font-bold uppercase px-2 py-0.5 rounded-full mb-2 border tracking-[0.25px]"
+              :class="isVetVisit
+                ? 'text-sentry-300 bg-sentry-500/15 border-sentry-500/30'
+                : 'text-neon-300 bg-neon-300/10 border-neon-300/30'"
             >
               {{ isVetVisit ? 'Vet Visit' : 'Vaccination' }}
             </span>
-            <h1 class="text-white text-[22px] font-semibold leading-tight mb-1.5">
+            <h1 class="text-white text-[22px] font-semibold leading-tight mb-1.5 break-words">
               {{ record.title }}
             </h1>
-            <div class="flex items-center gap-1.5 text-[#a49bc9] text-sm">
-              <UIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 text-[#584674] shrink-0" />
-              {{ formattedDate }}
+            <div class="flex items-center gap-1.5 text-dusk-300 text-sm">
+              <UIcon name="i-heroicons-calendar-days" class="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              {{ formatDate(record.date, 'long') }}
             </div>
           </div>
 
-          <!-- Actions -->
           <div class="flex gap-2 shrink-0">
             <UButton
               :to="`/pets/${id}/health-records/${recordId}/edit`"
               color="secondary"
               variant="solid"
               icon="i-heroicons-pencil-square"
-              size="sm"
+              class="pointer-coarse:min-h-11"
             >
               Edit
             </UButton>
@@ -366,9 +291,9 @@ async function confirmRemoveAttachment() {
               color="error"
               variant="ghost"
               icon="i-heroicons-trash"
-              size="sm"
               aria-label="Delete record"
-              @click="isDeleteOpen = true"
+              class="pointer-coarse:min-h-11 pointer-coarse:min-w-11 justify-center"
+              @click="() => { isDeleteOpen = true }"
             />
           </div>
         </div>
@@ -376,197 +301,153 @@ async function confirmRemoveAttachment() {
 
       <!-- Vet visit metadata -->
       <div
-        v-if="isVetVisit && vetMeta && (vetMeta.clinicName || vetMeta.vetName || vetMeta.diagnosis || vetMeta.followUpDate)"
-        class="rounded-2xl overflow-hidden"
-        style="background: #150f23; border: 1px solid #362d59; box-shadow: rgba(0,0,0,0.1) 0px 10px 15px -3px; font-family: Rubik, sans-serif"
+        v-if="isVetVisit && (meta.clinicName || meta.vetName || meta.diagnosis || meta.followUpDate)"
+        :class="panelCls"
       >
-        <div
-          class="flex items-center gap-3 px-5 py-4"
-          style="border-bottom: 1px solid #362d59"
-        >
-          <span
-            class="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style="background: color-mix(in oklch, #6a5fc1 15%, transparent); border: 1px solid color-mix(in oklch, #6a5fc1 35%, transparent)"
-          >
-            <UIcon name="i-heroicons-clipboard-document-list" class="w-3.5 h-3.5 text-[#9a8ee8]" />
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-border-dark">
+          <span class="w-7 h-7 rounded-lg grid place-items-center shrink-0 bg-sentry-500/15 border border-sentry-500/35">
+            <UIcon name="i-heroicons-clipboard-document-list" class="w-3.5 h-3.5 text-sentry-300" />
           </span>
-          <span class="text-white text-sm font-semibold">Visit Details</span>
+          <h2 class="text-white text-sm font-semibold">
+            Visit Details
+          </h2>
         </div>
 
-        <div class="divide-y" style="border-color: #362d59">
-          <div v-if="vetMeta.clinicName" class="flex items-center gap-3 px-5 py-3.5">
-            <UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-[#584674] shrink-0" />
-            <span
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] w-28 shrink-0"
-              style="letter-spacing: 0.25px"
-            >Clinic</span>
-            <span class="text-white text-sm">{{ vetMeta.clinicName }}</span>
+        <dl class="divide-y divide-border-dark">
+          <div v-if="meta.clinicName" class="flex items-center gap-3 px-5 py-3.5">
+            <UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-dusk-400 shrink-0" aria-hidden="true" />
+            <dt class="text-[10px] font-semibold uppercase text-dusk-300 w-28 shrink-0 tracking-[0.25px]">
+              Clinic
+            </dt>
+            <dd class="text-white text-sm min-w-0 break-words">
+              {{ meta.clinicName }}
+            </dd>
           </div>
-          <div v-if="vetMeta.vetName" class="flex items-center gap-3 px-5 py-3.5">
-            <UIcon name="i-heroicons-user" class="w-4 h-4 text-[#584674] shrink-0" />
-            <span
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] w-28 shrink-0"
-              style="letter-spacing: 0.25px"
-            >Veterinarian</span>
-            <span class="text-white text-sm">{{ vetMeta.vetName }}</span>
+          <div v-if="meta.vetName" class="flex items-center gap-3 px-5 py-3.5">
+            <UIcon name="i-heroicons-user" class="w-4 h-4 text-dusk-400 shrink-0" aria-hidden="true" />
+            <dt class="text-[10px] font-semibold uppercase text-dusk-300 w-28 shrink-0 tracking-[0.25px]">
+              Veterinarian
+            </dt>
+            <dd class="text-white text-sm min-w-0 break-words">
+              {{ meta.vetName }}
+            </dd>
           </div>
-          <div v-if="vetMeta.diagnosis" class="flex items-start gap-3 px-5 py-3.5">
-            <UIcon name="i-heroicons-document-text" class="w-4 h-4 text-[#584674] shrink-0 mt-0.5" />
-            <span
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] w-28 shrink-0 mt-0.5"
-              style="letter-spacing: 0.25px"
-            >Diagnosis</span>
-            <span class="text-[#e5e7eb] text-sm leading-relaxed whitespace-pre-wrap">{{ vetMeta.diagnosis }}</span>
+          <div v-if="meta.diagnosis" class="flex items-start gap-3 px-5 py-3.5">
+            <UIcon name="i-heroicons-document-text" class="w-4 h-4 text-dusk-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <dt class="text-[10px] font-semibold uppercase text-dusk-300 w-28 shrink-0 mt-0.5 tracking-[0.25px]">
+              Diagnosis
+            </dt>
+            <dd class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap min-w-0 break-words">
+              {{ meta.diagnosis }}
+            </dd>
           </div>
-          <div v-if="formattedFollowUp" class="flex items-center gap-3 px-5 py-3.5">
-            <UIcon name="i-heroicons-calendar" class="w-4 h-4 text-[#584674] shrink-0" />
-            <span
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] w-28 shrink-0"
-              style="letter-spacing: 0.25px"
-            >Follow-up</span>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-white text-sm">{{ formattedFollowUp }}</span>
-              <span
-                v-if="followUpStatus === 'overdue'"
-                class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
-                style="
-                  color: #ef4444;
-                  background: color-mix(in oklch, #ef4444 12%, transparent);
-                  border: 1px solid color-mix(in oklch, #ef4444 30%, transparent);
-                  letter-spacing: 0.2px;
-                "
-              >
-                <UIcon name="i-heroicons-exclamation-circle" class="w-3 h-3" />
-                Overdue
+          <div v-if="meta.followUpDate" class="flex items-center gap-3 px-5 py-3.5">
+            <UIcon name="i-heroicons-calendar" class="w-4 h-4 text-dusk-400 shrink-0" aria-hidden="true" />
+            <dt class="text-[10px] font-semibold uppercase text-dusk-300 w-28 shrink-0 tracking-[0.25px]">
+              Follow-up
+            </dt>
+            <dd class="flex items-center gap-2 flex-wrap">
+              <span class="text-white text-sm">{{ formatDate(meta.followUpDate) }}</span>
+              <DueBadge
+                v-if="activeDue && activeDue.status !== 'ok'"
+                :status="activeDue.status"
+                :label="dueLabel(activeDue.days)"
+              />
+              <span v-else-if="isSuperseded" class="text-dusk-300 text-xs">
+                Done — a later visit was logged
               </span>
-            </div>
+            </dd>
           </div>
-        </div>
+        </dl>
       </div>
 
       <!-- Vaccination metadata -->
       <div
-        v-if="!isVetVisit && vacMeta && (vacMeta.vaccineName || vacMeta.batchNumber || vacMeta.nextDueDate)"
-        class="rounded-2xl overflow-hidden"
-        style="background: #150f23; border: 1px solid #362d59; box-shadow: rgba(0,0,0,0.1) 0px 10px 15px -3px; font-family: Rubik, sans-serif"
+        v-if="!isVetVisit && (meta.vaccineName || meta.batchNumber || meta.nextDueDate)"
+        :class="panelCls"
       >
-        <div
-          class="flex items-center gap-3 px-5 py-4"
-          style="border-bottom: 1px solid #362d59"
-        >
-          <span
-            class="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style="background: color-mix(in oklch, #c2ef4e 10%, transparent); border: 1px solid color-mix(in oklch, #c2ef4e 30%, transparent)"
-          >
-            <UIcon name="i-heroicons-beaker" class="w-3.5 h-3.5 text-[#c2ef4e]" />
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-border-dark">
+          <span class="w-7 h-7 rounded-lg grid place-items-center shrink-0 bg-neon-300/10 border border-neon-300/30">
+            <UIcon name="i-heroicons-beaker" class="w-3.5 h-3.5 text-neon-300" />
           </span>
-          <span class="text-white text-sm font-semibold">Vaccine Details</span>
+          <h2 class="text-white text-sm font-semibold">
+            Vaccine Details
+          </h2>
         </div>
 
-        <div class="divide-y" style="border-color: #362d59">
-          <div v-if="vacMeta.vaccineName" class="flex items-center gap-3 px-5 py-3.5">
-            <UIcon name="i-heroicons-tag" class="w-4 h-4 text-[#584674] shrink-0" />
-            <span
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] w-28 shrink-0"
-              style="letter-spacing: 0.25px"
-            >Vaccine</span>
-            <span class="text-white text-sm">{{ vacMeta.vaccineName }}</span>
+        <dl class="divide-y divide-border-dark">
+          <div v-if="meta.vaccineName" class="flex items-center gap-3 px-5 py-3.5">
+            <UIcon name="i-heroicons-tag" class="w-4 h-4 text-dusk-400 shrink-0" aria-hidden="true" />
+            <dt class="text-[10px] font-semibold uppercase text-dusk-300 w-28 shrink-0 tracking-[0.25px]">
+              Vaccine
+            </dt>
+            <dd class="text-white text-sm min-w-0 break-words">
+              {{ meta.vaccineName }}
+            </dd>
           </div>
-          <div v-if="vacMeta.batchNumber" class="flex items-center gap-3 px-5 py-3.5">
-            <UIcon name="i-heroicons-hashtag" class="w-4 h-4 text-[#584674] shrink-0" />
-            <span
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] w-28 shrink-0"
-              style="letter-spacing: 0.25px"
-            >Batch No.</span>
-            <span class="text-[#e5e7eb] text-sm font-mono">{{ vacMeta.batchNumber }}</span>
+          <div v-if="meta.batchNumber" class="flex items-center gap-3 px-5 py-3.5">
+            <UIcon name="i-heroicons-hashtag" class="w-4 h-4 text-dusk-400 shrink-0" aria-hidden="true" />
+            <dt class="text-[10px] font-semibold uppercase text-dusk-300 w-28 shrink-0 tracking-[0.25px]">
+              Batch No.
+            </dt>
+            <dd class="text-gray-200 text-sm font-mono min-w-0 break-all">
+              {{ meta.batchNumber }}
+            </dd>
           </div>
-          <div v-if="formattedNextDue" class="flex items-center gap-3 px-5 py-3.5">
-            <UIcon name="i-heroicons-calendar" class="w-4 h-4 text-[#584674] shrink-0" />
-            <span
-              class="text-[10px] font-semibold uppercase text-[#a49bc9] w-28 shrink-0"
-              style="letter-spacing: 0.25px"
-            >Next Due</span>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-white text-sm">{{ formattedNextDue }}</span>
-              <span
-                v-if="nextDueStatus === 'overdue'"
-                class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
-                style="
-                  color: #ef4444;
-                  background: color-mix(in oklch, #ef4444 12%, transparent);
-                  border: 1px solid color-mix(in oklch, #ef4444 30%, transparent);
-                  letter-spacing: 0.2px;
-                "
-              >
-                <UIcon name="i-heroicons-exclamation-circle" class="w-3 h-3" />
-                Overdue
+          <div v-if="meta.nextDueDate" class="flex items-center gap-3 px-5 py-3.5">
+            <UIcon name="i-heroicons-calendar" class="w-4 h-4 text-dusk-400 shrink-0" aria-hidden="true" />
+            <dt class="text-[10px] font-semibold uppercase text-dusk-300 w-28 shrink-0 tracking-[0.25px]">
+              Next Due
+            </dt>
+            <dd class="flex items-center gap-2 flex-wrap">
+              <span class="text-white text-sm">{{ formatDate(meta.nextDueDate) }}</span>
+              <DueBadge
+                v-if="activeDue && activeDue.status !== 'ok'"
+                :status="activeDue.status"
+                :label="dueLabel(activeDue.days)"
+              />
+              <span v-else-if="isSuperseded" class="text-dusk-300 text-xs">
+                Superseded by a later dose
               </span>
-              <span
-                v-else-if="nextDueStatus === 'due-soon'"
-                class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
-                style="
-                  color: #f59e0b;
-                  background: color-mix(in oklch, #f59e0b 12%, transparent);
-                  border: 1px solid color-mix(in oklch, #f59e0b 30%, transparent);
-                  letter-spacing: 0.2px;
-                "
-              >
-                <UIcon name="i-heroicons-clock" class="w-3 h-3" />
-                Due Soon
-              </span>
-            </div>
+            </dd>
           </div>
-        </div>
+        </dl>
       </div>
 
       <!-- Notes -->
-      <div
-        v-if="record.notes"
-        class="rounded-2xl overflow-hidden"
-        style="background: #150f23; border: 1px solid #362d59; box-shadow: rgba(0,0,0,0.1) 0px 10px 15px -3px; font-family: Rubik, sans-serif"
-      >
-        <div
-          class="flex items-center gap-3 px-5 py-4"
-          style="border-bottom: 1px solid #362d59"
-        >
-          <span
-            class="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style="background: #1f1633; border: 1px solid #362d59"
-          >
-            <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-3.5 h-3.5 text-[#9a8ee8]" />
+      <div v-if="record.notes" :class="panelCls">
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-border-dark">
+          <span class="w-7 h-7 rounded-lg grid place-items-center shrink-0 bg-dusk-900 border border-border-dark">
+            <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-3.5 h-3.5 text-sentry-300" />
           </span>
-          <span class="text-white text-sm font-semibold">Notes</span>
+          <h2 class="text-white text-sm font-semibold">
+            Notes
+          </h2>
         </div>
-        <div class="px-5 py-4 text-[#e5e7eb] text-sm leading-relaxed whitespace-pre-wrap">
+        <div class="px-5 py-4 text-gray-200 text-sm leading-relaxed whitespace-pre-wrap break-words">
           {{ record.notes }}
         </div>
       </div>
 
       <!-- Attachments -->
-      <div
-        class="rounded-2xl overflow-hidden"
-        style="background: #150f23; border: 1px solid #362d59; box-shadow: rgba(0,0,0,0.1) 0px 10px 15px -3px; font-family: Rubik, sans-serif"
-      >
-        <div
-          class="flex items-center gap-3 px-5 py-4"
-          style="border-bottom: 1px solid #362d59"
-        >
-          <span
-            class="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style="background: #1f1633; border: 1px solid #362d59"
-          >
-            <UIcon name="i-heroicons-paper-clip" class="w-3.5 h-3.5 text-[#9a8ee8]" />
+      <div :class="panelCls">
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-border-dark">
+          <span class="w-7 h-7 rounded-lg grid place-items-center shrink-0 bg-dusk-900 border border-border-dark">
+            <UIcon name="i-heroicons-paper-clip" class="w-3.5 h-3.5 text-sentry-300" />
           </span>
-          <span class="text-white text-sm font-semibold flex-1">Attachments</span>
+          <h2 class="text-white text-sm font-semibold flex-1">
+            Attachments
+          </h2>
           <span
             v-if="record.attachments?.length"
-            class="text-[11px] font-semibold text-[#a49bc9] mr-2"
+            class="text-[11px] font-semibold text-dusk-300 mr-2"
           >{{ record.attachments.length }}</span>
           <UButton
-            size="xs"
+            size="sm"
             color="secondary"
             variant="solid"
             icon="i-heroicons-plus"
+            class="pointer-coarse:min-h-11"
             :disabled="isUploading"
             @click="openFilePicker"
           >
@@ -577,35 +458,21 @@ async function confirmRemoveAttachment() {
         <!-- Empty state -->
         <div
           v-if="!record.attachments?.length"
-          class="flex flex-col items-center justify-center py-10 gap-3"
+          class="flex flex-col items-center justify-center py-10 gap-3 px-5 text-center"
         >
-          <span
-            class="w-11 h-11 rounded-xl grid place-items-center"
-            style="background: #1f1633; border: 1px solid #362d59"
-          >
-            <UIcon name="i-heroicons-paper-clip" class="w-5 h-5 text-[#6a5fc1]" />
+          <span class="w-11 h-11 rounded-xl grid place-items-center bg-dusk-900 border border-border-dark">
+            <UIcon name="i-heroicons-paper-clip" class="w-5 h-5 text-sentry-500" />
           </span>
-          <p class="text-[#a49bc9] text-sm">No attachments yet</p>
-          <UButton
-            size="sm"
-            color="secondary"
-            variant="solid"
-            icon="i-heroicons-arrow-up-tray"
-            @click="openFilePicker"
-          >
-            Add Attachment
-          </UButton>
+          <p class="text-dusk-300 text-sm">
+            No attachments yet — add lab results, prescriptions or certificates (JPEG, PNG, WebP or PDF, up to 5MB).
+          </p>
         </div>
 
-        <!-- Attachments content -->
         <div v-else class="p-5 flex flex-col gap-3">
-          <!-- Image thumbnails grid -->
-          <div
-            v-if="record.attachments.some(isImage)"
-            class="grid grid-cols-3 sm:grid-cols-4 gap-2"
-          >
+          <!-- Image thumbnails -->
+          <div v-if="imageAttachments.length" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
             <div
-              v-for="url in record.attachments.filter(isImage)"
+              v-for="url in imageAttachments"
               :key="url"
               class="relative group"
             >
@@ -613,8 +480,7 @@ async function confirmRemoveAttachment() {
                 :href="url"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="block rounded-lg overflow-hidden aspect-square focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
-                style="border: 1px solid #362d59"
+                class="block rounded-lg overflow-hidden aspect-square border border-border-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-sentry-500"
               >
                 <img
                   :src="url"
@@ -623,25 +489,22 @@ async function confirmRemoveAttachment() {
                   loading="lazy"
                 >
               </a>
+              <!-- Always visible on touch screens; revealed on hover/focus with a mouse -->
               <button
                 type="button"
-                class="absolute top-1.5 right-1.5 w-6 h-6 rounded-md grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
-                style="background: rgba(21, 15, 35, 0.88); border: 1px solid #4b3f7a; color: #f87171; backdrop-filter: blur(4px)"
+                class="absolute top-1.5 right-1.5 w-7 h-7 pointer-coarse:w-9 pointer-coarse:h-9 rounded-md grid place-items-center text-red-400 bg-dusk-950/90 border border-dusk-600 backdrop-blur-sm transition-opacity duration-150 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sentry-500"
                 :aria-label="`Remove ${fileName(url)}`"
                 @click.prevent="promptRemoveAttachment(url)"
               >
-                <UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+                <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <!-- PDF / other file links -->
-          <div
-            v-if="record.attachments.some(u => !isImage(u))"
-            class="flex flex-col gap-1.5"
-          >
+          <!-- PDF / other files -->
+          <div v-if="fileAttachments.length" class="flex flex-col gap-1.5">
             <div
-              v-for="url in record.attachments.filter(u => !isImage(u))"
+              v-for="url in fileAttachments"
               :key="url"
               class="flex items-center gap-2"
             >
@@ -649,10 +512,9 @@ async function confirmRemoveAttachment() {
                 :href="url"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="flex-1 inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-[13px] text-[#a49bc9] hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
-                style="background: #1f1633; border: 1px solid #362d59; font-family: Rubik, sans-serif"
+                class="flex-1 min-w-0 inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-[13px] text-dusk-300 hover:text-white transition-colors bg-dusk-900 border border-border-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-sentry-500"
               >
-                <UIcon name="i-heroicons-document" class="w-4 h-4 shrink-0 text-[#6a5fc1]" />
+                <UIcon name="i-heroicons-document" class="w-4 h-4 shrink-0 text-sentry-500" />
                 <span class="truncate">{{ fileName(url) }}</span>
                 <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3.5 h-3.5 shrink-0 ml-auto" />
               </a>
@@ -660,52 +522,31 @@ async function confirmRemoveAttachment() {
                 color="error"
                 variant="ghost"
                 icon="i-heroicons-trash"
-                size="xs"
+                class="pointer-coarse:min-h-11 pointer-coarse:min-w-11 justify-center"
                 :aria-label="`Remove ${fileName(url)}`"
                 @click="promptRemoveAttachment(url)"
               />
             </div>
           </div>
-
-          <!-- Add more -->
-          <UButton
-            size="sm"
-            color="secondary"
-            variant="ghost"
-            icon="i-heroicons-plus"
-            class="self-start mt-1"
-            @click="openFilePicker"
-          >
-            Add more
-          </UButton>
         </div>
       </div>
-
     </template>
 
     <!-- Delete record confirmation modal -->
     <UModal v-model:open="isDeleteOpen" :title="`Delete '${record?.title}'?`" :dismissible="!isDeleting">
       <template #body>
-        <p class="text-[#e5e7eb] text-sm" style="font-family: Rubik, sans-serif">
+        <p class="text-gray-200 text-sm">
           Are you sure you want to delete
-          <strong class="text-white">{{ record?.title }}</strong>?
-          This can't be undone.
+          <strong class="text-white">{{ record?.title }}</strong>
+          and its attachments? This can't be undone.
         </p>
       </template>
       <template #footer>
         <div class="flex items-center justify-end gap-3 w-full">
-          <UButton
-            variant="ghost"
-            :disabled="isDeleting"
-            @click="isDeleteOpen = false"
-          >
+          <UButton variant="ghost" :disabled="isDeleting" @click="() => { isDeleteOpen = false }">
             Cancel
           </UButton>
-          <UButton
-            color="error"
-            :loading="isDeleting"
-            @click="confirmDelete"
-          >
+          <UButton color="error" :loading="isDeleting" @click="confirmDelete">
             Delete
           </UButton>
         </div>
@@ -720,12 +561,10 @@ async function confirmRemoveAttachment() {
       @update:open="(v) => { if (!v) cancelUpload() }"
     >
       <template #body>
-        <div class="flex flex-col gap-4" style="font-family: Rubik, sans-serif">
-          <!-- Image preview -->
+        <div class="flex flex-col gap-4">
           <div
             v-if="previewUrl"
-            class="w-full rounded-xl overflow-hidden flex items-center justify-center"
-            style="background: #1a1230; border: 1px solid #362d59; min-height: 180px; max-height: 320px"
+            class="w-full rounded-xl overflow-hidden flex items-center justify-center bg-dusk-900 border border-border-dark min-h-[180px] max-h-[320px]"
           >
             <img
               :src="previewUrl"
@@ -734,36 +573,27 @@ async function confirmRemoveAttachment() {
             >
           </div>
 
-          <!-- PDF / file preview -->
           <div
             v-else-if="selectedFile"
-            class="flex items-center gap-3 px-4 py-3.5 rounded-xl"
-            style="background: #1f1633; border: 1px solid #362d59"
+            class="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-dusk-900 border border-border-dark"
           >
-            <span
-              class="w-10 h-10 rounded-lg grid place-items-center shrink-0"
-              style="background: color-mix(in oklch, #6a5fc1 15%, transparent); border: 1px solid color-mix(in oklch, #6a5fc1 30%, transparent)"
-            >
-              <UIcon name="i-heroicons-document" class="w-5 h-5 text-[#9a8ee8]" />
+            <span class="w-10 h-10 rounded-lg grid place-items-center shrink-0 bg-sentry-500/15 border border-sentry-500/30">
+              <UIcon name="i-heroicons-document" class="w-5 h-5 text-sentry-300" />
             </span>
             <div class="flex flex-col min-w-0">
               <span class="text-white text-sm font-medium truncate">{{ selectedFile.name }}</span>
-              <span class="text-[#a49bc9] text-xs mt-0.5">{{ formatFileSize(selectedFile.size) }}</span>
+              <span class="text-dusk-300 text-xs mt-0.5">{{ formatFileSize(selectedFile.size) }}</span>
             </div>
           </div>
 
-          <p class="text-[#a49bc9] text-sm text-center">
+          <p class="text-dusk-300 text-sm text-center">
             Upload this file to the health record?
           </p>
         </div>
       </template>
       <template #footer>
         <div class="flex items-center justify-end gap-3 w-full">
-          <UButton
-            variant="ghost"
-            :disabled="isUploading"
-            @click="cancelUpload"
-          >
+          <UButton variant="ghost" :disabled="isUploading" @click="cancelUpload">
             Cancel
           </UButton>
           <UButton
@@ -781,31 +611,22 @@ async function confirmRemoveAttachment() {
     <!-- Remove attachment confirmation modal -->
     <UModal v-model:open="isRemoveOpen" title="Remove Attachment?" :dismissible="!isRemoving">
       <template #body>
-        <p class="text-[#e5e7eb] text-sm" style="font-family: Rubik, sans-serif">
+        <p class="text-gray-200 text-sm">
           Are you sure you want to remove
-          <strong class="text-white">{{ attachmentToRemove ? fileName(attachmentToRemove) : '' }}</strong>?
+          <strong class="text-white break-all">{{ attachmentToRemove ? fileName(attachmentToRemove) : '' }}</strong>?
           This can't be undone.
         </p>
       </template>
       <template #footer>
         <div class="flex items-center justify-end gap-3 w-full">
-          <UButton
-            variant="ghost"
-            :disabled="isRemoving"
-            @click="isRemoveOpen = false"
-          >
+          <UButton variant="ghost" :disabled="isRemoving" @click="() => { isRemoveOpen = false }">
             Cancel
           </UButton>
-          <UButton
-            color="error"
-            :loading="isRemoving"
-            @click="confirmRemoveAttachment"
-          >
+          <UButton color="error" :loading="isRemoving" @click="confirmRemoveAttachment">
             Remove
           </UButton>
         </div>
       </template>
     </UModal>
-
   </div>
 </template>

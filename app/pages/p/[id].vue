@@ -1,16 +1,8 @@
 <script setup lang="ts">
+import type { PublicPet } from '#shared/types/models'
+
 definePageMeta({ layout: 'public' })
 
-interface PublicPet {
-  _id: string
-  name: string
-  species: 'dog' | 'cat' | 'bird' | 'rabbit' | 'other'
-  breed?: string
-  birthday?: string
-  gender?: 'male' | 'female' | 'unknown'
-  photo?: string
-  isPublic: boolean
-}
 
 const route = useRoute()
 const id = route.params.id as string
@@ -20,38 +12,9 @@ const { data: pet, error } = await useFetch<PublicPet>(`/api/public/pets/${id}`)
 const isPrivate = computed(() => error.value?.statusCode === 403)
 const notFound = computed(() => error.value && error.value.statusCode !== 403)
 
-const formattedBirthday = computed(() => {
-  if (!pet.value?.birthday) return null
-  return new Date(pet.value.birthday).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-})
+const formattedBirthday = computed(() => pet.value?.birthday ? formatDate(pet.value.birthday, 'long') : null)
 
-const petAge = computed(() => {
-  if (!pet.value?.birthday) return null
-
-  const birth = new Date(pet.value.birthday)
-  const now = new Date()
-
-  let years = now.getFullYear() - birth.getFullYear()
-  const monthDiff = now.getMonth() - birth.getMonth()
-
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
-    years--
-  }
-
-  if (years >= 1) {
-    return `${years} ${years === 1 ? 'year' : 'years'} old`
-  }
-
-  let months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
-  if (now.getDate() < birth.getDate()) months--
-  if (months < 0) months = 0
-
-  return `${months} ${months === 1 ? 'month' : 'months'} old`
-})
+const petAge = computed(() => pet.value?.birthday ? formatPetAge(pet.value.birthday) : null)
 
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
@@ -90,16 +53,16 @@ useSeoMeta({
     <div
       v-if="isPrivate"
       class="rounded-2xl p-8 text-center"
-      style="background: #150f23; border: 1px solid #362d59; font-family: Rubik, sans-serif"
+      style="background: var(--color-dusk-950); border: 1px solid var(--color-border-dark);"
     >
-      <UIcon name="i-heroicons-lock-closed" class="w-10 h-10 text-[#a49bc9] mb-3" />
+      <UIcon name="i-heroicons-lock-closed" class="w-10 h-10 text-dusk-300 mb-3" />
       <h1
         class="text-white text-xl font-semibold mb-2"
         style="letter-spacing: -0.01em"
       >
         This profile is private
       </h1>
-      <p class="text-[#a49bc9] text-sm">
+      <p class="text-dusk-300 text-sm">
         The owner hasn't made this pet's profile public.
       </p>
     </div>
@@ -108,16 +71,16 @@ useSeoMeta({
     <div
       v-else-if="notFound"
       class="rounded-2xl p-8 text-center"
-      style="background: #150f23; border: 1px solid #362d59; font-family: Rubik, sans-serif"
+      style="background: var(--color-dusk-950); border: 1px solid var(--color-border-dark);"
     >
-      <UIcon name="i-heroicons-question-mark-circle" class="w-10 h-10 text-[#a49bc9] mb-3" />
+      <UIcon name="i-heroicons-question-mark-circle" class="w-10 h-10 text-dusk-300 mb-3" />
       <h1
         class="text-white text-xl font-semibold mb-2"
         style="letter-spacing: -0.01em"
       >
         Pet not found
       </h1>
-      <p class="text-[#a49bc9] text-sm">
+      <p class="text-dusk-300 text-sm">
         This profile doesn't exist or the link is invalid.
       </p>
     </div>
@@ -126,22 +89,22 @@ useSeoMeta({
     <div
       v-else-if="pet"
       class="rounded-2xl p-8"
-      style="background: #150f23; border: 1px solid #362d59; font-family: Rubik, sans-serif"
+      style="background: var(--color-dusk-950); border: 1px solid var(--color-border-dark);"
     >
       <div class="flex flex-col items-center text-center">
         <div class="relative mb-5">
           <UAvatar
-            :src="pet.photo"
+            :src="pet.photo ?? undefined"
             :icon="!pet.photo ? 'i-heroicons-user' : undefined"
             :alt="pet.photo ? pet.name : undefined"
             size="3xl"
-            class="ring-2 ring-[#362d59]"
+            class="ring-2 ring-border-dark"
             :style="{ boxShadow: '0 0 40px rgba(106,95,193,0.3)' }"
           />
         </div>
 
         <span
-          class="text-[10px] font-bold uppercase text-[#a49bc9] mb-1"
+          class="text-[10px] font-bold uppercase text-dusk-300 mb-1"
           style="letter-spacing: 0.3px"
         >
           {{ pet.species }}
@@ -154,7 +117,7 @@ useSeoMeta({
           {{ pet.name }}
         </h1>
 
-        <p class="text-[#a49bc9] text-sm">
+        <p class="text-dusk-300 text-sm">
           {{ pet.breed || '—' }}
           <template v-if="petAge"> · {{ petAge }}</template>
           <template v-if="pet.gender && pet.gender !== 'unknown'"> · {{ capitalize(pet.gender) }}</template>
@@ -163,11 +126,11 @@ useSeoMeta({
 
       <div
         class="mt-7 pt-5 grid grid-cols-1 sm:grid-cols-3 gap-4"
-        style="border-top: 1px solid #362d59"
+        style="border-top: 1px solid var(--color-border-dark)"
       >
         <div class="text-center sm:text-left">
           <div
-            class="text-[10px] font-semibold uppercase text-[#a49bc9] mb-1"
+            class="text-[10px] font-semibold uppercase text-dusk-300 mb-1"
             style="letter-spacing: 0.25px"
           >
             Birthday
@@ -178,7 +141,7 @@ useSeoMeta({
         </div>
         <div class="text-center sm:text-left">
           <div
-            class="text-[10px] font-semibold uppercase text-[#a49bc9] mb-1"
+            class="text-[10px] font-semibold uppercase text-dusk-300 mb-1"
             style="letter-spacing: 0.25px"
           >
             Gender
@@ -189,7 +152,7 @@ useSeoMeta({
         </div>
         <div class="text-center sm:text-left">
           <div
-            class="text-[10px] font-semibold uppercase text-[#a49bc9] mb-1"
+            class="text-[10px] font-semibold uppercase text-dusk-300 mb-1"
             style="letter-spacing: 0.25px"
           >
             Species

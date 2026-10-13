@@ -15,6 +15,10 @@
    * See DESIGN.md for full context and usage guidelines
    * =================================================================== */
 
+  /* Rubik is the UI font for all text (DESIGN.md). Declared here so @nuxt/fonts loads it;
+   * an inline style="font-family: Rubik" alone never triggers the font download. */
+  --font-sans: "Rubik", -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+
   /* -----------------------------------------------------------------
    * Sentry: Sentry Purple — links, hover states, focus rings
    * Base: #6a5fc1 | Usage: primary color role

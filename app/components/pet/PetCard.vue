@@ -1,13 +1,7 @@
 <script setup lang="ts">
-interface Pet {
-  _id: string
-  name: string
-  species: 'dog' | 'cat' | 'bird' | 'rabbit' | 'other'
-  breed?: string
-  photo?: string
-}
+import type { Pet } from '#shared/types/models'
 
-defineProps<{ pet: Pet }>()
+defineProps<{ pet: Pick<Pet, '_id' | 'name' | 'species' | 'breed' | 'photo'> }>()
 </script>
 
 <template>
@@ -15,35 +9,33 @@ defineProps<{ pet: Pet }>()
     <div
       class="rounded-2xl overflow-hidden flex flex-col items-center gap-3 px-4 py-5 text-center transition-colors group-hover:border-sentry-500"
       style="
-        background: #1f1633;
-        border: 1px solid #362d59;
+        background: var(--color-dusk-900);
+        border: 1px solid var(--color-border-dark);
         box-shadow: rgba(0,0,0,0.1) 0px 10px 15px -3px;
       "
     >
       <UAvatar
-        :src="pet.photo"
+        :src="pet.photo ?? undefined"
         :icon="!pet.photo ? 'i-heroicons-user' : undefined"
         :alt="pet.photo ? pet.name : undefined"
         size="2xl"
-        class="ring-2 ring-[#362d59]"
+        class="ring-2 ring-border-dark"
       />
 
       <div>
         <p
-          class="text-[10px] font-semibold uppercase text-[#a49bc9] mb-0.5"
-          style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
+          class="text-[10px] font-semibold uppercase text-dusk-300 mb-0.5"
+          style="letter-spacing: 0.25px;"
         >
           {{ pet.species }}
         </p>
         <p
           class="text-white font-semibold text-base leading-tight"
-          style="font-family: Rubik, sans-serif"
         >
           {{ pet.name }}
         </p>
         <p
-          class="text-[#a49bc9] text-sm mt-0.5"
-          style="font-family: Rubik, sans-serif"
+          class="text-dusk-300 text-sm mt-0.5"
         >
           {{ pet.breed || '—' }}
         </p>

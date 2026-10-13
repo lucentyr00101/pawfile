@@ -1,18 +1,9 @@
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
+import type { Pet } from '#shared/types/models'
+import type { VetVisitFormData } from '~/components/health/VetVisitForm.vue'
+import type { VaccinationFormData } from '~/components/health/VaccinationForm.vue'
 
-interface Pet {
-  _id: string
-  name: string
-}
-
-interface HealthFormData {
-  type: 'vet_visit' | 'vaccination'
-  title: string
-  date: string
-  notes?: string
-  metadata?: Record<string, string | undefined>
-}
+type HealthFormData = VetVisitFormData | VaccinationFormData
 
 const route = useRoute()
 const id = route.params.id as string
@@ -64,8 +55,7 @@ async function onSubmit(data: HealthFormData) {
     <!-- Breadcrumb -->
     <NuxtLink
       :to="`/pets/${id}?tab=health`"
-      class="inline-flex items-center gap-1.5 text-[13px] text-[#a49bc9] hover:text-white transition-colors w-fit"
-      style="font-family: Rubik, sans-serif"
+      class="inline-flex items-center gap-1.5 text-[13px] text-dusk-300 hover:text-white transition-colors w-fit"
     >
       <UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5 shrink-0" />
       <span>{{ pet?.name ?? 'Pet' }} / Health Records</span>
@@ -76,24 +66,23 @@ async function onSubmit(data: HealthFormData) {
       <div
         class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
         :style="isVetVisit
-          ? 'background: color-mix(in oklch, #6a5fc1 15%, transparent); border: 1px solid color-mix(in oklch, #6a5fc1 35%, transparent); box-shadow: 0 0 24px rgba(106,95,193,0.15)'
-          : 'background: color-mix(in oklch, #c2ef4e 10%, transparent); border: 1px solid color-mix(in oklch, #c2ef4e 30%, transparent); box-shadow: 0 0 24px rgba(194,239,78,0.1)'"
+          ? 'background: color-mix(in oklch, var(--color-sentry-500) 15%, transparent); border: 1px solid color-mix(in oklch, var(--color-sentry-500) 35%, transparent); box-shadow: 0 0 24px rgba(106,95,193,0.15)'
+          : 'background: color-mix(in oklch, var(--color-neon-300) 10%, transparent); border: 1px solid color-mix(in oklch, var(--color-neon-300) 30%, transparent); box-shadow: 0 0 24px rgba(194,239,78,0.1)'"
       >
         <UIcon
           :name="isVetVisit ? 'i-heroicons-clipboard-document-list' : 'i-heroicons-beaker'"
           class="w-6 h-6"
-          :style="isVetVisit ? 'color: #9a8ee8' : 'color: #c2ef4e'"
+          :style="isVetVisit ? 'color: var(--color-sentry-300)' : 'color: var(--color-neon-300)'"
         />
       </div>
 
       <div class="flex flex-col gap-0.5">
         <h1
           class="text-white text-2xl font-semibold"
-          style="font-family: Rubik, sans-serif"
         >
           {{ pageTitle }}
         </h1>
-        <p class="text-[#a49bc9] text-sm" style="font-family: Rubik, sans-serif">
+        <p class="text-dusk-300 text-sm">
           {{ pageDesc }}
         </p>
       </div>
@@ -102,7 +91,7 @@ async function onSubmit(data: HealthFormData) {
     <!-- Form card -->
     <UCard
       :ui="{
-        root: 'bg-[#150f23] border border-[#362d59] rounded-2xl',
+        root: 'bg-dusk-950 border border-border-dark rounded-2xl',
       }"
     >
       <HealthVetVisitForm

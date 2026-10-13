@@ -9,11 +9,9 @@ export function useAuth() {
     await navigateTo('/login')
   }
 
+  /** Re-reads the session cookie (e.g. after login/register set it). */
   async function refresh() {
     await session.fetch()
-    if (session.loggedIn.value) {
-      await $fetch('/api/auth/me')
-    }
   }
 
   return { user, isLoggedIn, logout, refresh }

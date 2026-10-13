@@ -1,29 +1,6 @@
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
-
-interface Pet {
-  _id: string
-  name: string
-  species: 'dog' | 'cat' | 'bird' | 'rabbit' | 'other'
-  breed?: string
-  birthday?: string
-  gender?: 'male' | 'female' | 'unknown'
-  weight?: number
-  photo?: string
-  isPublic: boolean
-  notes?: string
-}
-
-interface PetFormData {
-  name: string
-  species: string
-  breed: string
-  birthday: string
-  gender: string
-  weight: string
-  notes: string
-  isPublic: boolean
-}
+import type { Pet } from '#shared/types/models'
+import type { PetFormData } from '~/components/pet/PetForm.vue'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -82,8 +59,7 @@ async function onSubmit(data: PetFormData) {
     <!-- Back link -->
     <NuxtLink
       :to="`/pets/${id}`"
-      class="flex items-center gap-1.5 text-sm text-[#a49bc9] hover:text-white transition-colors w-fit"
-      style="font-family: Rubik, sans-serif"
+      class="flex items-center gap-1.5 text-sm text-dusk-300 hover:text-white transition-colors w-fit"
     >
       <UIcon name="i-heroicons-arrow-left" class="w-4 h-4 shrink-0" />
       Back to Profile
@@ -104,11 +80,11 @@ async function onSubmit(data: PetFormData) {
     <!-- Error state -->
     <template v-else-if="error">
       <div class="flex flex-col items-center justify-center py-20 text-center">
-        <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 text-[#a49bc9] mb-4" />
-        <p class="text-white text-xl font-semibold mb-2" style="font-family: Rubik, sans-serif">
+        <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 text-dusk-300 mb-4" />
+        <p class="text-white text-xl font-semibold mb-2">
           Pet not found
         </p>
-        <p class="text-[#a49bc9] text-sm mb-6">
+        <p class="text-dusk-300 text-sm mb-6">
           This pet profile doesn't exist or you don't have access.
         </p>
         <UButton to="/dashboard" color="primary">
@@ -124,19 +100,18 @@ async function onSubmit(data: PetFormData) {
         <!-- Pencil icon badge -->
         <div
           class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-          style="background: #1f1633; border: 1px solid #362d59; box-shadow: 0 0 24px rgba(106,95,193,0.15)"
+          style="background: var(--color-dusk-900); border: 1px solid var(--color-border-dark); box-shadow: 0 0 24px rgba(106,95,193,0.15)"
         >
-          <UIcon name="i-heroicons-pencil-square" class="w-6 h-6 text-[#6a5fc1]" />
+          <UIcon name="i-heroicons-pencil-square" class="w-6 h-6 text-sentry-500" />
         </div>
 
         <div class="flex flex-col gap-0.5 min-w-0">
           <h1
             class="text-white text-2xl font-semibold leading-tight truncate"
-            style="font-family: Rubik, sans-serif"
           >
             Edit {{ pet.name }}
           </h1>
-          <p class="text-[#a49bc9] text-sm" style="font-family: Rubik, sans-serif">
+          <p class="text-dusk-300 text-sm">
             Update your pet's profile information.
           </p>
         </div>
@@ -148,12 +123,11 @@ async function onSubmit(data: PetFormData) {
           root: 'bg-dusk-950 border border-border-dark rounded-2xl',
         }"
       >
-        <PetForm :pet="pet" :loading="isSaving" @submit="onSubmit" />
+        <PetForm :key="pet.updatedAt" :pet="pet" :loading="isSaving" @submit="onSubmit" />
         <div class="flex justify-center pt-4">
           <NuxtLink
             :to="`/pets/${id}`"
-            class="text-sm text-[#a49bc9] hover:text-white transition-colors"
-            style="font-family: Rubik, sans-serif"
+            class="text-sm text-dusk-300 hover:text-white transition-colors"
           >
             Cancel
           </NuxtLink>

@@ -1,28 +1,17 @@
 <script setup lang="ts">
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
-import { PET_SPECIES } from '#shared/utils/pet'
+import { PET_GENDERS, PET_SPECIES, type PetGender, type PetSpecies } from '#shared/utils/pet'
+import type { Pet } from '#shared/types/models'
 
-interface PetFormData {
+export interface PetFormData {
   name: string
-  species: string
+  species: PetSpecies | undefined
   breed: string
   birthday: string
-  gender: string
+  gender: PetGender | undefined
   weight: string
   notes: string
   isPublic: boolean
-}
-
-interface Pet {
-  _id?: string
-  name: string
-  species: string
-  breed?: string
-  birthday?: string | Date
-  gender?: string
-  weight?: number
-  notes?: string
-  isPublic?: boolean
 }
 
 const props = defineProps<{
@@ -34,29 +23,24 @@ const emit = defineEmits<{
   submit: [data: PetFormData]
 }>()
 
-const SPECIES_OPTIONS = PET_SPECIES.map(value => ({
-  label: value.charAt(0).toUpperCase() + value.slice(1),
-  value,
-}))
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const SPECIES_OPTIONS = PET_SPECIES.map(value => ({ label: capitalize(value), value }))
+const GENDER_OPTIONS = PET_GENDERS.map(value => ({ label: capitalize(value), value }))
 
-const GENDER_OPTIONS = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Unknown', value: 'unknown' },
-]
-
-const state = reactive({
+const state = reactive<PetFormData>({
   name: props.pet?.name ?? '',
-  species: props.pet?.species ?? '',
+  species: props.pet?.species ?? undefined,
   breed: props.pet?.breed ?? '',
-  birthday: props.pet?.birthday
-    ? new Date(props.pet.birthday).toISOString().slice(0, 10)
-    : '',
-  gender: props.pet?.gender ?? '',
+  birthday: toDateInputValue(props.pet?.birthday),
+  gender: props.pet?.gender ?? undefined,
   weight: props.pet?.weight != null ? String(props.pet.weight) : '',
   notes: props.pet?.notes ?? '',
   isPublic: props.pet?.isPublic ?? false,
 })
+
+const initialState = JSON.stringify(state)
+// While `loading`, the parent is saving and will navigate away on success
+useUnsavedChangesGuard(() => !props.loading && JSON.stringify(state) !== initialState)
 
 function validate(data: typeof state): FormError[] {
   const errors: FormError[] = []
@@ -70,7 +54,7 @@ function validate(data: typeof state): FormError[] {
   if (data.weight !== '' && (isNaN(Number(data.weight)) || Number(data.weight) <= 0))
     errors.push({ name: 'weight', message: 'Weight must be a positive number' })
 
-  if (data.birthday && new Date(data.birthday) > new Date())
+  if (data.birthday && daysUntil(data.birthday) > 0)
     errors.push({ name: 'birthday', message: 'Birthday cannot be in the future' })
 
   return errors
@@ -80,30 +64,15 @@ function onSubmit(event: FormSubmitEvent<typeof state>) {
   emit('submit', { ...event.data })
 }
 
-const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
+const labelUi = { label: 'text-gray-200 text-sm font-medium mb-1.5' }
 </script>
 
 <template>
   <UForm :validate="validate" :state="state" class="space-y-6" @submit="onSubmit">
-
-    <!-- ── Section: Identity ─────────────────────────────────────── -->
-    <div class="flex items-center gap-3">
-      <p
-        class="text-[10px] font-semibold uppercase text-[#a49bc9] shrink-0"
-        style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
-      >
-        Identity
-      </p>
-      <div class="flex-1 h-px" style="background: #362d59" />
-    </div>
+    <FormSection title="Identity" />
 
     <div class="space-y-4">
-      <!-- Name (required) -->
-      <UFormField name="name" :ui="labelUi" required>
-        <template #label>
-          Pet Name
-          <span class="text-[#fa7faa] ml-0.5">*</span>
-        </template>
+      <UFormField label="Pet Name" name="name" :ui="labelUi" required>
         <UInput
           v-model="state.name"
           type="text"
@@ -113,12 +82,7 @@ const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
         />
       </UFormField>
 
-      <!-- Species (required) -->
-      <UFormField name="species" :ui="labelUi" required>
-        <template #label>
-          Species
-          <span class="text-[#fa7faa] ml-0.5">*</span>
-        </template>
+      <UFormField label="Species" name="species" :ui="labelUi" required>
         <USelect
           v-model="state.species"
           :items="SPECIES_OPTIONS"
@@ -128,7 +92,6 @@ const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
         />
       </UFormField>
 
-      <!-- Breed + Birthday -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <UFormField label="Breed" name="breed" :ui="labelUi">
           <UInput
@@ -151,19 +114,9 @@ const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
       </div>
     </div>
 
-    <!-- ── Section: Physical Details ─────────────────────────────── -->
-    <div class="flex items-center gap-3">
-      <p
-        class="text-[10px] font-semibold uppercase text-[#a49bc9] shrink-0"
-        style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
-      >
-        Physical Details
-      </p>
-      <div class="flex-1 h-px" style="background: #362d59" />
-    </div>
+    <FormSection title="Physical Details" />
 
     <div class="space-y-4">
-      <!-- Gender + Weight -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <UFormField label="Gender" name="gender" :ui="labelUi">
           <USelect
@@ -179,6 +132,7 @@ const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
           <UInput
             v-model="state.weight"
             type="number"
+            inputmode="decimal"
             placeholder="0.0"
             min="0"
             step="0.1"
@@ -186,16 +140,12 @@ const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
             class="w-full"
           >
             <template #trailing>
-              <span
-                class="text-[#a49bc9] text-sm select-none"
-                style="font-family: Rubik, sans-serif"
-              >kg</span>
+              <span class="text-dusk-300 text-sm select-none">kg</span>
             </template>
           </UInput>
         </UFormField>
       </div>
 
-      <!-- Notes -->
       <UFormField label="Notes" name="notes" :ui="labelUi">
         <UTextarea
           v-model="state.notes"
@@ -207,58 +157,22 @@ const labelUi = { label: 'text-[#e5e7eb] text-sm font-medium mb-1.5' }
       </UFormField>
     </div>
 
-    <!-- ── Section: Privacy ───────────────────────────────────────── -->
-    <div class="flex items-center gap-3">
-      <p
-        class="text-[10px] font-semibold uppercase text-[#a49bc9] shrink-0"
-        style="letter-spacing: 0.25px; font-family: Rubik, sans-serif"
-      >
-        Privacy
-      </p>
-      <div class="flex-1 h-px" style="background: #362d59" />
-    </div>
+    <FormSection title="Privacy" />
 
-    <div
-      class="flex items-center justify-between rounded-xl px-4 py-3"
-      style="background: #1f1633; border: 1px solid #362d59"
-    >
+    <div class="flex items-center justify-between gap-4 rounded-xl px-4 py-3 bg-dusk-900 border border-border-dark">
       <div>
-        <p
-          class="text-[#e5e7eb] text-sm font-medium"
-          style="font-family: Rubik, sans-serif"
-        >
+        <p id="public-profile-label" class="text-gray-200 text-sm font-medium">
           Public profile
         </p>
-        <p class="text-[#a49bc9] text-xs mt-0.5" style="font-family: Rubik, sans-serif">
-          Allow others to view this pet's profile
+        <p class="text-dusk-300 text-xs mt-0.5">
+          Anyone with the link can view this pet's name, photo, breed and birthday
         </p>
       </div>
-      <USwitch v-model="state.isPublic" color="primary" />
+      <USwitch v-model="state.isPublic" color="primary" aria-labelledby="public-profile-label" />
     </div>
 
-    <!-- ── Submit ─────────────────────────────────────────────────── -->
     <div class="pt-2">
-      <button
-        type="submit"
-        :disabled="loading"
-        class="w-full h-11 rounded-[13px] text-white text-sm font-bold uppercase tracking-wider transition-shadow duration-150 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-        style="
-          background-color: #79628c;
-          border: 1px solid #584674;
-          box-shadow: rgba(0,0,0,0.1) 0px 1px 3px 0px inset;
-          font-family: Rubik, sans-serif;
-          letter-spacing: 0.2px;
-        "
-        onmouseover="if (!this.disabled) this.style.boxShadow='rgba(0,0,0,0.18) 0px 0.5rem 1.5rem, rgba(0,0,0,0.1) 0px 1px 3px 0px inset'"
-        onmouseout="this.style.boxShadow='rgba(0,0,0,0.1) 0px 1px 3px 0px inset'"
-      >
-        <svg v-if="loading" class="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        {{ loading ? 'Saving…' : 'Save Pet' }}
-      </button>
+      <SubmitButton :loading="loading" label="Save Pet" />
     </div>
-
   </UForm>
 </template>

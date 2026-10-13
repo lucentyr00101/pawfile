@@ -1,187 +1,89 @@
 <script setup lang="ts">
-export interface VetVisitMetadata {
-  clinicName?: string
-  vetName?: string
-  diagnosis?: string
-  followUpDate?: string
-}
+import type { HealthRecord } from '#shared/types/models'
+import type { DueItem } from '~/utils/health'
 
-export interface VaccinationMetadata {
-  vaccineName?: string
-  batchNumber?: string
-  nextDueDate?: string
-}
-
-export interface HealthRecord {
-  _id: string
-  petId: string
-  type: 'vet_visit' | 'vaccination'
-  title: string
-  date: string
-  notes?: string
-  metadata?: VetVisitMetadata | VaccinationMetadata
-  attachments?: string[]
-  createdAt: string
-  updatedAt: string
-}
-
-const props = defineProps<{ record: HealthRecord }>()
+const props = defineProps<{
+  record: HealthRecord
+  /** Active (not superseded) due date for this record, if any */
+  due?: DueItem
+}>()
 const emit = defineEmits<{ click: [record: HealthRecord] }>()
 
-const formattedDate = computed(() =>
-  new Date(props.record.date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-)
-
 const isVetVisit = computed(() => props.record.type === 'vet_visit')
-const vetMeta = computed(() => isVetVisit.value ? (props.record.metadata as VetVisitMetadata) : null)
-const vacMeta = computed(() => !isVetVisit.value ? (props.record.metadata as VaccinationMetadata) : null)
-
-const nextDueStatus = computed(() => {
-  const raw = vacMeta.value?.nextDueDate
-  if (!raw) return null
-  const diff = (new Date(raw).getTime() - Date.now()) / 86_400_000
-  if (diff < 0) return 'overdue' as const
-  if (diff <= 7) return 'due-soon' as const
-  return 'ok' as const
-})
-
-const formattedNextDue = computed(() => {
-  const raw = vacMeta.value?.nextDueDate
-  if (!raw) return null
-  return new Date(raw).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-})
+const meta = computed(() => props.record.metadata ?? {})
 </script>
 
 <template>
   <button
     type="button"
-    class="w-full text-left group cursor-pointer transition-all duration-150 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6a5fc1]"
+    class="w-full text-left group cursor-pointer rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sentry-500"
     @click="emit('click', record)"
   >
     <div
-      class="flex gap-3 px-4 py-3.5 rounded-xl transition-colors duration-150 group-hover:border-[#6a5fc1]"
-      style="
-        background: #1f1633;
-        border: 1px solid #362d59;
-        font-family: Rubik, sans-serif;
-        box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px;
-      "
+      class="flex gap-3 px-4 py-3.5 rounded-xl bg-dusk-900 border border-border-dark shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1)] transition-colors duration-150 group-hover:border-sentry-500"
     >
       <!-- Type icon -->
       <div
-        class="shrink-0 w-9 h-9 rounded-lg grid place-items-center mt-0.5"
-        :style="isVetVisit
-          ? 'background: color-mix(in oklch, #6a5fc1 15%, transparent); border: 1px solid color-mix(in oklch, #6a5fc1 35%, transparent); color: #9a8ee8'
-          : 'background: color-mix(in oklch, #c2ef4e 10%, transparent); border: 1px solid color-mix(in oklch, #c2ef4e 30%, transparent); color: #c2ef4e'"
+        class="shrink-0 w-9 h-9 rounded-lg grid place-items-center mt-0.5 border"
+        :class="isVetVisit
+          ? 'bg-sentry-500/15 border-sentry-500/35 text-sentry-300'
+          : 'bg-neon-300/10 border-neon-300/30 text-neon-300'"
       >
         <UIcon
           :name="isVetVisit ? 'i-heroicons-clipboard-document-list' : 'i-heroicons-beaker'"
           class="w-4 h-4"
+          aria-hidden="true"
         />
       </div>
 
-      <!-- Content -->
       <div class="flex-1 min-w-0">
-        <!-- Title + date row -->
         <div class="flex items-start justify-between gap-2">
           <p class="text-white text-[13px] font-semibold leading-snug truncate">
             {{ record.title }}
           </p>
-          <span
-            class="shrink-0 text-[10px] font-semibold uppercase text-[#a49bc9] mt-0.5 whitespace-nowrap"
-            style="letter-spacing: 0.25px"
-          >
-            {{ formattedDate }}
+          <span class="shrink-0 text-[10px] font-semibold uppercase text-dusk-300 mt-0.5 whitespace-nowrap tracking-[0.25px]">
+            {{ formatDate(record.date) }}
           </span>
         </div>
 
-        <!-- Type label -->
         <div
-          class="mt-0.5 text-[10px] font-semibold uppercase"
-          :style="isVetVisit ? 'color: #9a8ee8; letter-spacing: 0.25px' : 'color: #c2ef4e; letter-spacing: 0.25px'"
+          class="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.25px]"
+          :class="isVetVisit ? 'text-sentry-300' : 'text-neon-300'"
         >
           {{ isVetVisit ? 'Vet Visit' : 'Vaccination' }}
         </div>
 
         <!-- Vet visit metadata -->
-        <template v-if="isVetVisit && vetMeta">
-          <div
-            v-if="vetMeta.clinicName || vetMeta.diagnosis"
-            class="mt-1.5 flex flex-col gap-1"
-          >
-            <span
-              v-if="vetMeta.clinicName"
-              class="text-[#a49bc9] text-[12px] flex items-center gap-1 truncate"
-            >
-              <UIcon name="i-heroicons-building-office-2" class="w-3 h-3 shrink-0" />
-              {{ vetMeta.clinicName }}
-            </span>
-            <span
-              v-if="vetMeta.diagnosis"
-              class="text-[#e5e7eb] text-[12px] flex items-start gap-1 line-clamp-2 whitespace-pre-line"
-            >
-              <UIcon name="i-heroicons-document-text" class="w-3 h-3 shrink-0 mt-0.5" />
-              {{ vetMeta.diagnosis }}
-            </span>
-          </div>
-        </template>
+        <div v-if="isVetVisit && (meta.clinicName || meta.diagnosis)" class="mt-1.5 flex flex-col gap-1">
+          <span v-if="meta.clinicName" class="text-dusk-300 text-[12px] flex items-center gap-1 min-w-0">
+            <UIcon name="i-heroicons-building-office-2" class="w-3 h-3 shrink-0" aria-hidden="true" />
+            <span class="truncate">{{ meta.clinicName }}</span>
+          </span>
+          <span v-if="meta.diagnosis" class="text-gray-200 text-[12px] flex items-start gap-1 min-w-0">
+            <UIcon name="i-heroicons-document-text" class="w-3 h-3 shrink-0 mt-0.5" aria-hidden="true" />
+            <span class="line-clamp-2 whitespace-pre-line">{{ meta.diagnosis }}</span>
+          </span>
+        </div>
 
         <!-- Vaccination metadata -->
-        <template v-if="!isVetVisit && vacMeta">
-          <div class="mt-1.5 flex flex-col gap-1">
-            <span
-              v-if="vacMeta.vaccineName"
-              class="text-[#a49bc9] text-[12px] flex items-center gap-1 truncate"
-            >
-              <UIcon name="i-heroicons-tag" class="w-3 h-3 shrink-0" />
-              {{ vacMeta.vaccineName }}
-            </span>
-            <template v-if="formattedNextDue">
-              <span
-                v-if="nextDueStatus === 'overdue'"
-                class="self-start inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
-                style="
-                  color: #ef4444;
-                  background: color-mix(in oklch, #ef4444 12%, transparent);
-                  border: 1px solid color-mix(in oklch, #ef4444 30%, transparent);
-                  letter-spacing: 0.2px;
-                "
-              >
-                <UIcon name="i-heroicons-exclamation-circle" class="w-3 h-3" />
-                Overdue · {{ formattedNextDue }}
-              </span>
-              <span
-                v-else-if="nextDueStatus === 'due-soon'"
-                class="self-start inline-flex items-center gap-1 text-[11px] font-semibold uppercase px-2 py-0.5 rounded-full"
-                style="
-                  color: #f59e0b;
-                  background: color-mix(in oklch, #f59e0b 12%, transparent);
-                  border: 1px solid color-mix(in oklch, #f59e0b 30%, transparent);
-                  letter-spacing: 0.2px;
-                "
-              >
-                <UIcon name="i-heroicons-clock" class="w-3 h-3" />
-                Due {{ formattedNextDue }}
-              </span>
-              <span
-                v-else
-                class="text-[#a49bc9] text-[12px] flex items-center gap-1"
-              >
-                <UIcon name="i-heroicons-calendar" class="w-3 h-3 shrink-0" />
-                Next due {{ formattedNextDue }}
-              </span>
-            </template>
-          </div>
-        </template>
+        <div v-if="!isVetVisit && meta.vaccineName" class="mt-1.5">
+          <span class="text-dusk-300 text-[12px] flex items-center gap-1 min-w-0">
+            <UIcon name="i-heroicons-tag" class="w-3 h-3 shrink-0" aria-hidden="true" />
+            <span class="truncate">{{ meta.vaccineName }}</span>
+          </span>
+        </div>
 
-        <!-- Notes preview -->
+        <!-- Active due date (next dose / follow-up) -->
+        <div v-if="due" class="mt-1.5 flex items-center gap-2 flex-wrap">
+          <DueBadge :status="due.status" :label="due.status === 'ok' ? undefined : dueLabel(due.days)" />
+          <span class="text-dusk-300 text-[12px]">
+            {{ due.kind === 'vaccination' ? 'Next dose' : 'Follow-up' }} · {{ formatDate(due.dueDate) }}
+          </span>
+        </div>
+
         <p
           v-if="record.notes"
-          class="mt-1.5 text-[#a49bc9] text-[12px] leading-relaxed line-clamp-3 whitespace-pre-line"
+          class="mt-1.5 text-dusk-300 text-[12px] leading-relaxed line-clamp-3 whitespace-pre-line"
         >
           {{ record.notes }}
         </p>

@@ -14,7 +14,7 @@
           </div>
           <span
             class="text-base font-bold text-white"
-            style="letter-spacing: -0.02em; font-family: Rubik, sans-serif"
+            style="letter-spacing: -0.02em;"
           >PawFile</span>
         </NuxtLink>
       </div>
@@ -28,8 +28,7 @@
 
     <footer class="border-t border-border-dark">
       <div
-        class="px-4 sm:px-6 py-5 text-center text-[#a49bc9] text-xs"
-        style="font-family: Rubik, sans-serif"
+        class="px-4 sm:px-6 py-5 text-center text-dusk-300 text-xs"
       >
         Want a profile for your pet?
         <NuxtLink to="/register" class="text-white hover:underline ml-1">
