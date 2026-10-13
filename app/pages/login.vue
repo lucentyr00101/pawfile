@@ -15,11 +15,18 @@ const state = reactive({
 const loading = ref(false)
 const showPassword = ref(false)
 
+const OAUTH_ERRORS: Record<string, string> = {
+  oauth_failed: 'OAuth sign-in failed. Please try again.',
+  oauth_email_missing: 'We couldn\'t get an email address from that provider. Please use another sign-in method.',
+  oauth_email_unverified: 'That provider account\'s email isn\'t verified. Verify it with the provider, then try again.',
+}
+
 onMounted(() => {
-  if (route.query.error === 'oauth_failed') {
+  const description = OAUTH_ERRORS[route.query.error as string]
+  if (description) {
     toast.add({
       title: 'Sign in failed',
-      description: 'OAuth sign-in failed. Please try again.',
+      description,
       color: 'error',
     })
   }

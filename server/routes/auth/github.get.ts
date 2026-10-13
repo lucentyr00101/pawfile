@@ -1,49 +1,20 @@
-import { connectDB } from '~~/server/utils/db'
-import { User } from '~~/server/models/user.model'
+import { signInWithOAuth } from '~~/server/utils/oauth'
 
 export default defineOAuthGitHubEventHandler({
+  // Fetch the primary email via /user/emails when the profile email is private
+  config: { emailRequired: true },
+
   async onSuccess(event, { user: githubProfile }) {
-    await connectDB()
-
-    const githubId = String(githubProfile.id)
-    const email = (githubProfile.email as string).toLowerCase()
-    const name = (githubProfile.name || githubProfile.login) as string
-    const avatar = githubProfile.avatar_url as string | undefined
-
-    // First: look up by provider + providerId (returning GitHub users)
-    let user = await User.findOne({ provider: 'github', providerId: githubId })
-
-    if (!user) {
-      const existingByEmail = await User.findOne({ email })
-
-      if (existingByEmail) {
-        // Email already registered under a different provider — link the GitHub account
-        existingByEmail.providerId = githubId
-        if (avatar) existingByEmail.avatar = avatar
-        await existingByEmail.save()
-        user = existingByEmail
-      } else {
-        // No account found — create a new GitHub-authenticated user
-        user = await User.create({
-          email,
-          name,
-          provider: 'github',
-          providerId: githubId,
-          avatar,
-        })
-      }
-    }
-
-    await setUserSession(event, {
-      user: {
-        id: String(user._id),
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-      },
+    return signInWithOAuth(event, {
+      provider: 'github',
+      providerId: String(githubProfile.id),
+      email: githubProfile.email as string | null,
+      // GitHub only allows verified addresses as the public profile email, so `email_verified`
+      // is set (by nuxt-auth-utils) only when the email came from /user/emails.
+      emailVerified: githubProfile.email_verified !== false,
+      name: (githubProfile.name || githubProfile.login) as string,
+      avatar: githubProfile.avatar_url as string | undefined,
     })
-
-    return sendRedirect(event, '/dashboard')
   },
 
   onError(event, error) {
