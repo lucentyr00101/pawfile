@@ -23,9 +23,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Pet has no photo' })
   }
 
-  await deleteFile(pet.photo)
-
+  // Clear the reference first so a storage failure can't leave the pet pointing at a deleted file
   const updated = await updatePet(id, session.user.id, { photo: null })
+
+  // Best-effort: the pet no longer references the file
+  await deleteFile(pet.photo).catch(err => console.error('[photo] Failed to delete photo:', err))
 
   return updated
 })

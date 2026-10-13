@@ -44,16 +44,20 @@ export default defineEventHandler(async (event) => {
   await connectDB()
 
   const pet = await getPetById(id, session.user.id)
+  const previousPhoto = pet.photo
 
-  if (pet.photo) {
-    await deleteFile(pet.photo)
-  }
-
+  // Upload and save the new photo before touching the old one, so a failed upload
+  // never leaves the pet pointing at a deleted file.
   const ext = MIME_TO_EXT[contentType]
   const filename = generateFilePath(session.user.id, `photo.${ext}`)
   const photoUrl = await uploadFile(filePart.data, filename, contentType)
 
   const updated = await updatePet(id, session.user.id, { photo: photoUrl })
+
+  if (previousPhoto) {
+    // Best-effort: the pet already references the new photo
+    await deleteFile(previousPhoto).catch(err => console.error('[photo] Failed to delete old photo:', err))
+  }
 
   return updated
 })
