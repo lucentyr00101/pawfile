@@ -1,9 +1,7 @@
 import mongoose from 'mongoose'
-import type {
-  HealthRecordType,
-  HealthRecordMetadata,
-} from '~~/server/models/health-record.model'
+import type { HealthRecordType } from '~~/server/models/health-record.model'
 import { createRecord, type CreateRecordInput } from '~~/server/services/health-record.service'
+import { parseHealthRecordMetadata, parseHealthRecordNotes } from '~~/server/utils/health-record'
 
 const ALLOWED_TYPES = ['vet_visit', 'vaccination'] as const satisfies readonly HealthRecordType[]
 
@@ -46,21 +44,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'date cannot be in the future' })
   }
 
-  if (type === 'vaccination' && metadata?.nextDueDate !== undefined) {
-    const nextDueDate = new Date(metadata.nextDueDate)
-    if (isNaN(nextDueDate.getTime())) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'metadata.nextDueDate must be a valid date',
-      })
-    }
-    if (nextDueDate <= parsedDate) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'metadata.nextDueDate must be after date',
-      })
-    }
+  if (title.trim().length > 200) {
+    throw createError({ statusCode: 400, statusMessage: 'title must be 200 characters or fewer' })
   }
+
+  const parsedMetadata = parseHealthRecordMetadata(type as HealthRecordType, metadata, parsedDate)
+  const parsedNotes = parseHealthRecordNotes(notes)
 
   await connectDB()
 
@@ -69,8 +58,8 @@ export default defineEventHandler(async (event) => {
     title: title.trim(),
     date: parsedDate,
   }
-  if (notes !== undefined) input.notes = notes
-  if (metadata !== undefined) input.metadata = metadata as HealthRecordMetadata
+  if (parsedNotes) input.notes = parsedNotes
+  if (parsedMetadata) input.metadata = parsedMetadata
 
   const record = await createRecord(session.user.id, petId, input)
 

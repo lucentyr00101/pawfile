@@ -23,12 +23,27 @@ export interface IHealthRecord extends Document {
   type: HealthRecordType
   title: string
   date: Date
-  notes?: string
+  notes?: string | null
   metadata?: HealthRecordMetadata
   attachments?: string[]
   createdAt: Date
   updatedAt: Date
 }
+
+// Union of every type's metadata fields. Typed (not Mixed) so dates are stored as Dates
+// and unknown keys are stripped; per-type field selection happens in parseHealthRecordMetadata().
+const HealthRecordMetadataSchema = new Schema(
+  {
+    clinicName: { type: String, trim: true, maxlength: 200 },
+    vetName: { type: String, trim: true, maxlength: 200 },
+    diagnosis: { type: String, trim: true, maxlength: 2000 },
+    followUpDate: { type: Date },
+    vaccineName: { type: String, trim: true, maxlength: 200 },
+    batchNumber: { type: String, trim: true, maxlength: 100 },
+    nextDueDate: { type: Date },
+  },
+  { _id: false },
+)
 
 const HealthRecordSchema = new Schema<IHealthRecord>(
   {
@@ -60,31 +75,21 @@ const HealthRecordSchema = new Schema<IHealthRecord>(
       type: String,
     },
     metadata: {
-      type: Schema.Types.Mixed,
+      type: HealthRecordMetadataSchema,
+      default: undefined,
     },
     attachments: {
       type: [String],
       default: [],
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
-  { timestamps: false },
+  // Mongoose maintains createdAt/updatedAt on every write, including findOneAndUpdate
+  { timestamps: true },
 )
 
 HealthRecordSchema.index({ petId: 1 })
 HealthRecordSchema.index({ userId: 1 })
 HealthRecordSchema.index({ petId: 1, type: 1 })
-
-HealthRecordSchema.pre('save', async function () {
-  this.updatedAt = new Date()
-})
 
 export const HealthRecord =
   mongoose.models.HealthRecord ?? mongoose.model<IHealthRecord>('HealthRecord', HealthRecordSchema)

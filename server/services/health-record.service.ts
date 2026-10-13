@@ -15,7 +15,11 @@ export interface CreateRecordInput {
   attachments?: string[]
 }
 
-export type UpdateRecordInput = Partial<CreateRecordInput>
+export type UpdateRecordInput = Partial<Omit<CreateRecordInput, 'notes' | 'metadata'>> & {
+  // null clears the field
+  notes?: string | null
+  metadata?: HealthRecordMetadata | null
+}
 
 export interface GetRecordsFilters {
   type?: HealthRecordType

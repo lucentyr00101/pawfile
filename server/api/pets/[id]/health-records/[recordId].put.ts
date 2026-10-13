@@ -1,10 +1,10 @@
 import mongoose from 'mongoose'
-import type { HealthRecordMetadata } from '~~/server/models/health-record.model'
 import {
   getRecordById,
   updateRecord,
   type UpdateRecordInput,
 } from '~~/server/services/health-record.service'
+import { parseHealthRecordMetadata, parseHealthRecordNotes } from '~~/server/utils/health-record'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -35,6 +35,9 @@ export default defineEventHandler(async (event) => {
     if (typeof title !== 'string' || title.trim().length === 0) {
       throw createError({ statusCode: 400, statusMessage: 'title must be a non-empty string' })
     }
+    if (title.trim().length > 200) {
+      throw createError({ statusCode: 400, statusMessage: 'title must be 200 characters or fewer' })
+    }
   }
 
   let parsedDate: Date | undefined
@@ -48,32 +51,24 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const parsedNotes = parseHealthRecordNotes(notes)
+
   await connectDB()
 
   const existing = await getRecordById(session.user.id, recordId)
 
-  if (existing.type === 'vaccination' && metadata?.nextDueDate !== undefined) {
-    const nextDueDate = new Date(metadata.nextDueDate)
-    if (isNaN(nextDueDate.getTime())) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'metadata.nextDueDate must be a valid date',
-      })
-    }
-    const baseDate = parsedDate ?? existing.date
-    if (nextDueDate <= baseDate) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'metadata.nextDueDate must be after date',
-      })
-    }
-  }
+  // Metadata is replaced wholesale when sent. When only the date changes, re-check the
+  // existing due dates against it so they can't end up before the record date.
+  const metadataSource = metadata !== undefined
+    ? metadata
+    : parsedDate ? existing.metadata?.toObject?.() : undefined
+  const parsedMetadata = parseHealthRecordMetadata(existing.type, metadataSource, parsedDate ?? existing.date)
 
   const input: UpdateRecordInput = {}
   if (title !== undefined) input.title = title.trim()
   if (parsedDate !== undefined) input.date = parsedDate
-  if (notes !== undefined) input.notes = notes
-  if (metadata !== undefined) input.metadata = metadata as HealthRecordMetadata
+  if (parsedNotes !== undefined) input.notes = parsedNotes
+  if (metadata !== undefined) input.metadata = parsedMetadata ?? null
 
   return updateRecord(session.user.id, recordId, input)
 })

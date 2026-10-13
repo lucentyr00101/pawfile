@@ -66,7 +66,8 @@ async function onSubmit(data: HealthFormData) {
   try {
     await $fetch(`/api/pets/${id}/health-records/${recordId}`, {
       method: 'PUT',
-      body: { title: data.title, date: data.date, notes: data.notes, metadata: data.metadata },
+      // notes: null (not undefined, which JSON drops) so clearing the field actually clears it
+      body: { title: data.title, date: data.date, notes: data.notes ?? null, metadata: data.metadata },
     })
     toast.add({ title: 'Record updated', description: 'Health record has been saved.', color: 'success' })
     await navigateTo(`/pets/${id}/health-records/${recordId}`)
