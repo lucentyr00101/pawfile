@@ -1,9 +1,10 @@
 import mongoose, { Schema, type Document } from 'mongoose'
+import { PET_SPECIES, type PetSpecies } from '#shared/utils/pet'
 
 export interface IPet extends Document {
   userId: mongoose.Types.ObjectId
   name: string
-  species: 'dog' | 'cat' | 'bird' | 'rabbit' | 'other'
+  species: PetSpecies
   breed?: string
   birthday?: Date
   gender?: 'male' | 'female' | 'unknown'
@@ -30,7 +31,7 @@ const PetSchema = new Schema<IPet>(
     species: {
       type: String,
       required: true,
-      enum: ['dog', 'cat', 'bird', 'rabbit', 'other'],
+      enum: [...PET_SPECIES],
     },
     breed: {
       type: String,

@@ -1,6 +1,6 @@
 import { createPet, type CreatePetInput } from '~~/server/services/pet.service'
+import { PET_SPECIES } from '#shared/utils/pet'
 
-const ALLOWED_SPECIES = ['dog', 'cat', 'bird', 'rabbit', 'other'] as const
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -16,10 +16,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'name and species are required' })
   }
 
-  if (!ALLOWED_SPECIES.includes(species)) {
+  if (!PET_SPECIES.includes(species)) {
     throw createError({
       statusCode: 400,
-      statusMessage: `species must be one of: ${ALLOWED_SPECIES.join(', ')}`,
+      statusMessage: `species must be one of: ${PET_SPECIES.join(', ')}`,
     })
   }
 

@@ -1,6 +1,6 @@
 import { updatePet, type UpdatePetInput } from '~~/server/services/pet.service'
+import { PET_SPECIES } from '#shared/utils/pet'
 
-const ALLOWED_SPECIES = ['dog', 'cat', 'bird', 'rabbit', 'other'] as const
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -14,10 +14,10 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { name, species, breed, birthday, gender, weight, notes, isPublic } = body ?? {}
 
-  if (species !== undefined && !ALLOWED_SPECIES.includes(species)) {
+  if (species !== undefined && !PET_SPECIES.includes(species)) {
     throw createError({
       statusCode: 400,
-      statusMessage: `species must be one of: ${ALLOWED_SPECIES.join(', ')}`,
+      statusMessage: `species must be one of: ${PET_SPECIES.join(', ')}`,
     })
   }
 

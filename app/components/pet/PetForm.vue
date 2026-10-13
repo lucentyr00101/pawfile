@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
+import { PET_SPECIES } from '#shared/utils/pet'
 
 interface PetFormData {
   name: string
@@ -33,16 +34,10 @@ const emit = defineEmits<{
   submit: [data: PetFormData]
 }>()
 
-const SPECIES_OPTIONS = [
-  { label: 'Dog', value: 'dog' },
-  { label: 'Cat', value: 'cat' },
-  { label: 'Bird', value: 'bird' },
-  { label: 'Fish', value: 'fish' },
-  { label: 'Rabbit', value: 'rabbit' },
-  { label: 'Hamster', value: 'hamster' },
-  { label: 'Reptile', value: 'reptile' },
-  { label: 'Other', value: 'other' },
-]
+const SPECIES_OPTIONS = PET_SPECIES.map(value => ({
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+  value,
+}))
 
 const GENDER_OPTIONS = [
   { label: 'Male', value: 'male' },
