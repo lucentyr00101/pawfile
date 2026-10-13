@@ -1,6 +1,5 @@
 import { createPet, type CreatePetInput } from '~~/server/services/pet.service'
-import { PET_SPECIES } from '#shared/utils/pet'
-
+import { PET_GENDERS, PET_SPECIES } from '#shared/utils/pet'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -20,6 +19,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       statusMessage: `species must be one of: ${PET_SPECIES.join(', ')}`,
+    })
+  }
+
+  if (gender !== undefined && !PET_GENDERS.includes(gender)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `gender must be one of: ${PET_GENDERS.join(', ')}`,
     })
   }
 

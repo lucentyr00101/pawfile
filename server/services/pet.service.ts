@@ -1,21 +1,26 @@
 import { Pet } from '~~/server/models/pet.model'
 import { HealthRecord } from '~~/server/models/health-record.model'
 import { deleteFile } from '~~/server/utils/storage'
-import type { PetSpecies } from '#shared/utils/pet'
+import type { PetGender, PetSpecies } from '#shared/utils/pet'
 
 export interface CreatePetInput {
   name: string
   species: PetSpecies
   breed?: string
   birthday?: Date
-  gender?: 'male' | 'female' | 'unknown'
+  gender?: PetGender
   weight?: number
   photo?: string | null
   isPublic?: boolean
   notes?: string
 }
 
-export type UpdatePetInput = Partial<CreatePetInput>
+type RequiredPetFields = 'name' | 'species' | 'isPublic'
+
+// Optional fields accept null to clear them
+export type UpdatePetInput = Partial<Pick<CreatePetInput, RequiredPetFields>> & {
+  [K in Exclude<keyof CreatePetInput, RequiredPetFields>]?: CreatePetInput[K] | null
+}
 
 export async function createPet(userId: string, data: CreatePetInput) {
   return Pet.create({ userId, ...data })

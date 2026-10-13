@@ -1,5 +1,5 @@
 import mongoose, { Schema, type Document } from 'mongoose'
-import { PET_SPECIES, type PetSpecies } from '#shared/utils/pet'
+import { PET_GENDERS, PET_SPECIES, type PetGender, type PetSpecies } from '#shared/utils/pet'
 
 export interface IPet extends Document {
   userId: mongoose.Types.ObjectId
@@ -7,7 +7,7 @@ export interface IPet extends Document {
   species: PetSpecies
   breed?: string
   birthday?: Date
-  gender?: 'male' | 'female' | 'unknown'
+  gender?: PetGender
   weight?: number
   photo?: string
   isPublic: boolean
@@ -42,7 +42,7 @@ const PetSchema = new Schema<IPet>(
     },
     gender: {
       type: String,
-      enum: ['male', 'female', 'unknown'],
+      enum: [...PET_GENDERS],
     },
     weight: {
       type: Number,
@@ -57,22 +57,11 @@ const PetSchema = new Schema<IPet>(
     notes: {
       type: String,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
-  { timestamps: false },
+  // Mongoose maintains createdAt/updatedAt on every write, including findOneAndUpdate
+  { timestamps: true },
 )
 
 PetSchema.index({ userId: 1 })
-
-PetSchema.pre('save', async function () {
-  this.updatedAt = new Date()
-})
 
 export const Pet = mongoose.models.Pet ?? mongoose.model<IPet>('Pet', PetSchema)

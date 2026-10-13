@@ -44,16 +44,17 @@ const isSaving = ref(false)
 async function onSubmit(data: PetFormData) {
   isSaving.value = true
   try {
-    const body: Record<string, unknown> = {
+    // Send null for emptied optional fields so the API clears them
+    const body = {
       name: data.name,
       species: data.species,
       isPublic: data.isPublic,
+      breed: data.breed || null,
+      birthday: data.birthday || null,
+      gender: data.gender || null,
+      weight: data.weight === '' ? null : Number(data.weight),
+      notes: data.notes || null,
     }
-    if (data.breed !== undefined) body.breed = data.breed || null
-    if (data.birthday) body.birthday = data.birthday
-    if (data.gender) body.gender = data.gender
-    if (data.weight !== '') body.weight = Number(data.weight)
-    if (data.notes !== undefined) body.notes = data.notes || null
 
     await $fetch(`/api/pets/${id}`, { method: 'PUT', body })
 
